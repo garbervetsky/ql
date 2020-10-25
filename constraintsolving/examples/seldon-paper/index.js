@@ -147,6 +147,95 @@ app.post('/sanitized', (req, res) => {
     });
 });
 
+// Field-sensitivity evaluation. With direct assingment after empty object initialization.
+app.post('/sanitized', (req, res) => {
+    console.log(req.body);
+    var resolvedPath =  path.join(appDir, req.body.path);
+
+    var containerObject = {};
+    containerObject.taintedField = resolvedPath;
+
+    fs.writeFile(containerObject.taintedField, req.body.contents, (err) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
+// Field-sensitivity evaluation. With direct assingment during empty object initialization.
+app.post('/sanitized', (req, res) => {
+    console.log(req.body);
+    var resolvedPath =  path.join(appDir, req.body.path);
+
+    var containerObject = {
+        taintedField: resolvedPath,
+    };
+
+    fs.writeFile(containerObject.taintedField, req.body.contents, (err) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
+// Field-sensitivity evaluation. With conditional clearing the tainted path. Should appear in MAY?
+app.post('/sanitized', (req, res) => {
+    console.log(req.body);
+    var resolvedPath =  path.join(appDir, req.body.path);
+
+    var containerObject = {};
+    containerObject.taintedField = resolvedPath;
+
+    if (containerObject.nonExistentField) {
+        containerObject.taintedField = "perro";
+    }
+    
+    fs.writeFile(containerObject.taintedField, req.body.contents, (err) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
+// Array sensitivity. `push` method over array
+app.post('/sanitized', (req, res) => {
+    console.log(req.body);
+    var resolvedPath =  path.join(appDir, req.body.path);
+
+    var containerObject = [];
+    containerObject.push(resolvedPath)
+
+    fs.writeFile(containerObject[0], req.body.contents, (err) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
+// Array sensitivity. Literal array initialization
+app.post('/sanitized', (req, res) => {
+    console.log(req.body);
+    var resolvedPath =  path.join(appDir, req.body.path);
+
+    var containerObject = [resolvedPath];
+
+    fs.writeFile(containerObject[0], req.body.contents, (err) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
 // Dummy method to mark as known sanitizer in the query
 function sanitizePath(path) {
     return path;

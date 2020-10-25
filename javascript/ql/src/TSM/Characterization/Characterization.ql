@@ -3,33 +3,18 @@
  * @description Using externally controlled strings in a command line may allow a malicious
  *              user to change the meaning of the command.
  * @kind path-problem
- * @problem.severity error
- * @precision high
  * @id js/shell-command-constructed-from-input
- * @tags correctness
- *       security
- *       external/cwe/cwe-078
- *       external/cwe/cwe-088
  */
 
 import javascript
+import TSM.PathGraph
 import TSM.PropagationGraphs
-import DataFlow::PathGraph
 
 class CharacterizationConfiguration extends DataFlow::Configuration {
-  CharacterizationConfiguration() { this = "Points-To Characterization" }
+  CharacterizationConfiguration() { this = "Characterization" }
 
   override predicate isSource(DataFlow::Node source) { source instanceof RemoteFlowSource }
   override predicate isSink(DataFlow::Node source) { source instanceof FileSystemWriteAccessParameter }
-
-  // Hook for considering PropagationGraph on dataflow steps
-  override predicate isAdditionalFlowStep(DataFlow::Node src, DataFlow::Node trg) {
-     exists(PropagationGraph::Node propA, PropagationGraph::Node propB |
-       PropagationGraph::edge(propA, propB) and
-       propA.asDataFlowNode() = src and
-       propB.asDataFlowNode() = trg
-     )
-  }
 }
 
 class FileSystemWriteAccessParameter extends DataFlow::Node {
@@ -41,7 +26,7 @@ class FileSystemWriteAccessParameter extends DataFlow::Node {
 predicate propagationGraphReachable(
   PropagationGraph::Node source, PropagationGraph::Node destination
 ) {
-  // There's a direct flow
+  // There's a direct floecho Hellow
   PropagationGraph::edge(source, destination)
   or
   // There's a flow through an intermediate node
@@ -51,7 +36,9 @@ predicate propagationGraphReachable(
   )
 }
 
-from CharacterizationConfiguration config, DataFlow::PathNode source, DataFlow::PathNode sink
+from PropagationGraph::Node source, PropagationGraph::Node sink
 where
-    config.hasFlowPath(source, sink)
+  propagationGraphReachable(source, sink) and
+  source.asDataFlowNode() instanceof RemoteFlowSource and
+  sink.asDataFlowNode() instanceof FileSystemWriteAccessParameter
 select source, source, sink, "Data flow from $@ to $@.", source.toString(), sink.toString()

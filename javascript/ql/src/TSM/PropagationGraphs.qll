@@ -143,7 +143,6 @@ private int minOcurrences() { result = 1 }
     }
 
     string toString() { result = nd.toString() }
-    // string toString() { result = rep() }
 
     predicate flowsTo(DataFlow::Node sink) {
       nd = sink
@@ -160,13 +159,16 @@ private int minOcurrences() { result = 1 }
    * (cf Section 5.2 of Seldon paper).
    */
   predicate edge(Node pred, Node succ) {
+    // `pred` is an argument of the CallNode `succ`
     exists(DataFlow::CallNode c | not calls(c, _) and c = succ.asDataFlowNode() |
       pred.flowsTo(c.getAnArgument())
     )
     or
+    // normal taint propagation
     pred.flowsTo(succ.asDataFlowNode()) and
     pred != succ
     or
+    // when initializing an object literal, tracks an assignment during to one of its fields
     exists(ObjectExpr obj | obj.flow() = succ.asDataFlowNode() |
       pred.flowsTo(obj.getAProperty().getInit().flow())
     )
