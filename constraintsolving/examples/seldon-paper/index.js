@@ -20,14 +20,16 @@ const appDir = process.env.APP_PATH;
 console.log(`Using appDir=[${appDir}]`);
 
 // Field-sensitivity evaluation. With direct assingment after empty object initialization.
-app.post('/sanitized', (req, res) => {
+app.post('/usingVar', (req, res) => {
     console.log(req.body);
     var resolvedPath =  path.join(appDir, req.body.path);
 
     var containerObject = new Object();
     containerObject.taintedField = resolvedPath;
 
-    fs.writeFile(containerObject.taintedField, req.body.contents, (err) => {
+    var tf = containerObject.taintedField 
+
+    fs.writeFile(tf, req.body.contents, (err) => {
         if (err) {
             res.sendStatus(500);
         } else {
@@ -35,6 +37,24 @@ app.post('/sanitized', (req, res) => {
         }
     });
 });
+
+// Field-sensitivity evaluation. With direct assingment after empty object initialization.
+app.post('/usingField', (req, res) => {
+    console.log(req.body);
+    var resolvedPath =  path.join(appDir, req.body.path);
+
+    var containerObject = new Object();
+    containerObject.taintedField = resolvedPath;
+
+    fs.writeFile(containerObject.taintedField , req.body.contents, (err) => {
+        if (err) {
+            res.sendStatus(500);
+        } else {
+            res.sendStatus(200);
+        }
+    });
+});
+
 
 app.listen(port, () => {
     console.log(`Application listenting on port ${port}...`);
