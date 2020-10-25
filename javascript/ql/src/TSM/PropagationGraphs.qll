@@ -43,8 +43,7 @@ private int minOcurrences() { result = 1 }
           nd = invk.getAnArgument()
           or
           nd = invk.(DataFlow::MethodCallNode).getReceiver()
-        ) and
-        taintStep(_, nd)
+        )
       ) and
       isRelevant(nd)
     }
@@ -154,29 +153,39 @@ private int minOcurrences() { result = 1 }
     DataFlow::Node asDataFlowNode() { result = nd }
   }
 
+  predicate edge(Node pred, Node succ) {
+    edge(pred, succ, _)
+  }
+
   /**
    * Holds if there is an edge between `pred` and `succ` in the propagation graph
    * (cf Section 5.2 of Seldon paper).
    */
-  predicate edge(Node pred, Node succ) {
+  predicate edge(Node pred, Node succ, string matchingRule) {
     // `pred` is an argument of the CallNode `succ`
     exists(DataFlow::CallNode c | not calls(c, _) and c = succ.asDataFlowNode() |
       pred.flowsTo(c.getAnArgument())
-    )
+    ) and matchingRule = "call and parameter"
     or
+
+    // exists(DataFlow::CallNode c | not calls(c, _) and c = pred.asDataFlowNode() |
+    //   pointsTo(_, succ.asDataFlowNode()).(DataFlow::Node) = pred.asDataFlowNode() and
+    //   succ != pred
+    // ) and matchingRule = "points to with call" or
+
     // normal taint propagation
     pred.flowsTo(succ.asDataFlowNode()) and
-    pred != succ
+    pred != succ and matchingRule = "flows to"
     or
     // when initializing an object literal, tracks an assignment during to one of its fields
     exists(ObjectExpr obj | obj.flow() = succ.asDataFlowNode() |
       pred.flowsTo(obj.getAProperty().getInit().flow())
-    )
+    ) and matchingRule = "object init"
     or
-    pred.flowsTo(succ.asDataFlowNode().(DataFlow::ArrayLiteralNode).getAnElement())
+    pred.flowsTo(succ.asDataFlowNode().(DataFlow::ArrayLiteralNode).getAnElement()) and matchingRule = "array"
     or
     pointsTo(_, pred.asDataFlowNode()) = pointsTo(_, succ.asDataFlowNode()) and
-    pred != succ
+    pred != succ and matchingRule = "points to"
   }
 
   /**
@@ -235,6 +244,10 @@ private int minOcurrences() { result = 1 }
       arg = call.getReceiver() and
       parm = callee.getReceiver()
     )
+  }
+
+  AllocationSite allPointedBy(DataFlow::Node nd) {
+    pointsTo(_, nd) = result
   }
 
   /** Gets the allocation sites `nd` may refer to in context `ctxt`. */

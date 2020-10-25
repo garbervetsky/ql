@@ -14,7 +14,10 @@ class CharacterizationConfiguration extends DataFlow::Configuration {
   CharacterizationConfiguration() { this = "Characterization" }
 
   override predicate isSource(DataFlow::Node source) { source instanceof RemoteFlowSource }
-  override predicate isSink(DataFlow::Node source) { source instanceof FileSystemWriteAccessParameter }
+
+  override predicate isSink(DataFlow::Node source) {
+    source instanceof FileSystemWriteAccessParameter
+  }
 }
 
 class FileSystemWriteAccessParameter extends DataFlow::Node {
@@ -27,13 +30,21 @@ predicate propagationGraphReachable(
   PropagationGraph::Node source, PropagationGraph::Node destination
 ) {
   // There's a direct floecho Hellow
-  PropagationGraph::edge(source, destination)
+  PropagationGraph::edge(source, destination, _)
   or
   // There's a flow through an intermediate node
   exists(PropagationGraph::Node intermediate |
-    PropagationGraph::edge(source, intermediate) and
+    PropagationGraph::edge(source, intermediate, _) and
     propagationGraphReachable(intermediate, destination)
   )
+}
+
+predicate allPropGraphNodes(PropagationGraph::Node nd) {
+  nd = nd
+}
+
+query predicate pointsToGraph(DataFlow::Node frm, DataFlow::Node to) {
+  PropagationGraph::allPointedBy(frm).(DataFlow::Node) = to
 }
 
 from PropagationGraph::Node source, PropagationGraph::Node sink
