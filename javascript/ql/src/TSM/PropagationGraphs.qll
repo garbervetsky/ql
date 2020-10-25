@@ -44,6 +44,7 @@ private int minOcurrences() { result = 1 }
           or
           nd = invk.(DataFlow::MethodCallNode).getReceiver()
         )
+        and ( taintStep(_, nd) or nd instanceof DataFlow::PropRead) 
       ) and
       isRelevant(nd)
     }
