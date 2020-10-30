@@ -31,17 +31,6 @@ predicate isBoosted(DataFlow::PathNode source, DataFlow::PathNode sink) {
     cfg.hasFlowPath(source, sink)
   )
 }
-query predicate pairSrcSnkAlert(string ssrc, string ssnk){
-  exists(PropagationGraph::Node src, PropagationGraph::Node snk, 
-    DataFlow::PathNode source, DataFlow::PathNode sink, 
-    BoostedConfig::Configuration cfg | cfg.hasFlowPath(source, sink)
-    and source.getNode() = src.asDataFlowNode()
-    and sink.getNode() = snk.asDataFlowNode() 
-    and
-    ssrc = src.getconcatrep() and 
-    ssnk = snk.getconcatrep()    
-    )
-}  
 
 /**
  * v0 the original number of alerts

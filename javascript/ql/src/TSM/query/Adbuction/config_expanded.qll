@@ -17,14 +17,14 @@ module ExpandedConfiguration {
     callBack = invk.getABoundCallbackParameter(_,_)
   }
 
-  predicate isCandidateSource(DataFlow::Node  source) {
+  predicate isCandidateSource(DataFlow::Node source) {
     exists (DataFlow::InvokeNode call, DataFlow::Node callback  |
       isRelevant(call) and callFromImport("mv", call) and
       isCallBackArgument(callback, call) and source = callback
     )
   }
   
-  predicate isCandidateSink(DataFlow::Node  sink) { 
+  predicate isCandidateSink(DataFlow::Node sink) { 
     exists (DataFlow::InvokeNode call, DataFlow::Node arg  |
     isRelevant(call) and callFromImport("mv", call) and
     arg = call.getAnArgument() and not (isCallBackArgument(arg, call)) and
@@ -57,16 +57,6 @@ module ExpandedConfiguration {
       config.isSink(sink, label)
       or isCandidateSink(sink) // and label = sink.(Sink).getAFlowLabel())
     }
-
-    // override predicate isSource(DataFlow::Node source) {
-    //   config.isSource(source)
-    //   or isCandidateSource(source)
-    // }
-
-    // override predicate isSink(DataFlow::Node sink) {
-    //   config.isSink(sink)
-    //   or isCandidateSink(sink)
-    // }
 
     override predicate isBarrier(DataFlow::Node node) {
       config.isBarrier(node)

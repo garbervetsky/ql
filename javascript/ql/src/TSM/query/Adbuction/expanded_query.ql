@@ -23,6 +23,10 @@ query predicate compareAlertsCount(int v0, int vExpanded) {
   )
 }
 
+/***
+ * This predicate provides the (src,snk) pairs from the alerts
+ * To-do: remove the alerts from V0
+ */
 query predicate pairSrcSnkAlert(string ssrc, string ssnk){
   exists(PropagationGraph::Node src, PropagationGraph::Node snk, 
     DataFlow::PathNode source, DataFlow::PathNode sink, 
