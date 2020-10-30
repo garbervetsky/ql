@@ -28,7 +28,8 @@ private DataFlow::Node getAnExport(string pkgName) {
       apw.writes(m.(AnalyzedModule).getModuleObject(), "exports", result)
     )
     or
-    m.(ES2015Module).exports("default", result.(DataFlow::ValueNode).getAstNode())
+    m.(ES2015Module).getAnExportedValue("default") = result 
+    // m.(ES2015Module).exports("default", result.(DataFlow::ValueNode).getAstNode())
   )
 }
 

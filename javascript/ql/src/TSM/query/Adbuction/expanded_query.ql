@@ -13,8 +13,8 @@ import semmle.javascript.security.dataflow.TaintedPath::TaintedPath
 import TSM.PropagationGraphs
 
 
-query predicate compareAlertsCount(int v0, int vBoosted) {
-  vBoosted = count(DataFlow::PathNode source, DataFlow::PathNode sink |
+query predicate compareAlertsCount(int v0, int vExpanded) {
+  vExpanded = count(DataFlow::PathNode source, DataFlow::PathNode sink |
     exists(ExpandedConfiguration::ExpandedConfiguration cfg | cfg.hasFlowPath(source, sink))
   )
   and 

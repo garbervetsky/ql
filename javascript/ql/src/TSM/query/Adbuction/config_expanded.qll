@@ -32,17 +32,55 @@ module ExpandedConfiguration {
     )
   }
 
-  class CandidateSink extends Sink 
-  {
-    CandidateSink() { isCandidateSink(this)}
-  }
+  // class CandidateSink extends Sink 
+  // {
+  //   CandidateSink() { isCandidateSink(this)}
+  // }
 
-  class CandidateSource extends Sink 
-  {
-    CandidateSource() { isCandidateSource(this)}
-  }
+  // class CandidateSource extends Sink 
+  // {
+  //   CandidateSource() { isCandidateSource(this)}
+  // }
 
-  class ExpandedConfiguration extends Configuration {   
-   
+  class ExpandedConfiguration extends DataFlow::Configuration { 
+    // A tainted path config
+    Configuration config; 
+
+    ExpandedConfiguration() { this = "ExpandedConfiguration" }
+
+    override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
+      config.isSource(source, label)
+      or isCandidateSource(source) // and label = source.(Source).getAFlowLabel())
+    }
+
+    override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
+      config.isSink(sink, label)
+      or isCandidateSink(sink) // and label = sink.(Sink).getAFlowLabel())
+    }
+
+    // override predicate isSource(DataFlow::Node source) {
+    //   config.isSource(source)
+    //   or isCandidateSource(source)
+    // }
+
+    // override predicate isSink(DataFlow::Node sink) {
+    //   config.isSink(sink)
+    //   or isCandidateSink(sink)
+    // }
+
+    override predicate isBarrier(DataFlow::Node node) {
+      config.isBarrier(node)
+    }
+
+    override predicate isBarrierGuard(DataFlow::BarrierGuardNode guard) {
+      config.isBarrierGuard(guard)
+    }
+
+    override predicate isAdditionalFlowStep(
+      DataFlow::Node src, DataFlow::Node dst, DataFlow::FlowLabel srclabel,
+      DataFlow::FlowLabel dstlabel
+    ) {
+      config.isAdditionalFlowStep(src, dst, srclabel, dstlabel)
+    }
   }
 }

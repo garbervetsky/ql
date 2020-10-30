@@ -4,7 +4,7 @@
  */
 
 import javascript
-import semmle.javascript.security.dataflow.TaintedPathCustomizations
+//import semmle.javascript.security.dataflow.TaintedPathCustomizations
 import TSM.NodeRepresentation
 import tsm_repr_pred
 
@@ -17,6 +17,7 @@ private float minScore_san() { result = 1.1}
 module BoostedConfig {
   private import TsmRepr
   private import config_expanded
+  private import semmle.javascript.security.dataflow.TaintedPath
 
   string rep(DataFlow::Node node){
       result = candidateRep(node, _)
@@ -44,29 +45,101 @@ module BoostedConfig {
   /**
    * A taint-tracking configuration for reasoning about SQL injection vulnerabilities.
    */
-  class Configuration extends TaintTracking::Configuration {
-    Configuration() { this = "BoostedConfig" }
+  // class ConfigurationOrig extends TaintTracking::Configuration {
+  //   ConfigurationOrig() { this = "BoostedConfig" }
 
-    override predicate isSource(DataFlow::Node source) { 
+  //   override predicate isSource(DataFlow::Node source) { 
+  //     exists (float score |  BoostedConfig::isSource(source, score) and score>=minScore_src()) 
+  //     or (
+  //       source instanceof TaintedPath::Source and
+  //       not source instanceof ExpandedConfiguration::CandidateSource
+  //     )
+  //   }
+
+  //   override predicate isSink(DataFlow::Node sink) { 
+  //     exists (float score | BoostedConfig::isSink(sink, score) and score>=minScore_snk()) 
+  //     or (
+  //       sink instanceof TaintedPath::Sink and
+  //       not sink instanceof ExpandedConfiguration::CandidateSink
+  //     ) 
+  //   }
+
+  //   override predicate isSanitizer(DataFlow::Node node) {
+  //     exists (float score | BoostedConfig::isSanitizer(node, score) and score>=minScore_san()) 
+  //     or
+  //     node instanceof TaintedPath::Sanitizer
+  //   }
+
+  //   override predicate isAdditionalFlowStep(DataFlow::Node src, DataFlow::Node trg, DataFlow::FlowLabel inlbl, DataFlow::FlowLabel outlbl) {      
+  //     ExpandedConfiguration::isAdditionalTaintedPathFlowStep(src, trg, inlbl, outlbl) 
+  //   }
+
+  // }
+
+  // class Configuration2 extends ExpandedConfiguration::ExpandedConfiguration {   
+  //   // Configuration2() { this = "Configuration2" }
+
+  //   override predicate isSource(DataFlow::Node source) { 
+  //     exists (float score |  BoostedConfig::isSource(source, score) and score>=minScore_src()) 
+  //     or (
+  //       source instanceof TaintedPath::Source and
+  //       not source instanceof ExpandedConfiguration::CandidateSource
+  //     )
+  //   }
+
+  //   override predicate isSink(DataFlow::Node sink) { 
+  //     exists (float score | BoostedConfig::isSink(sink, score) and score>=minScore_snk()) 
+  //     or (
+  //       sink instanceof TaintedPath::Sink and
+  //       not sink instanceof ExpandedConfiguration::CandidateSink
+  //      ) 
+  //   } 
+
+  //   override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
+  //     super.isSource(source, label)
+  //     and isSource(source)
+  //   }
+
+  //   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
+  //     super.isSink(sink, label) 
+  //     and isSink(sink)
+  //   }
+  // }
+
+  class Configuration extends DataFlow::Configuration { 
+    // A tainted path config
+    TaintedPath::Configuration config; 
+
+    Configuration() { this = "BostedConfiguration" }
+
+    override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
       exists (float score |  BoostedConfig::isSource(source, score) and score>=minScore_src()) 
-      or (
-        source instanceof TaintedPath::Source and
-        not source instanceof ExpandedConfiguration::CandidateSource
-      )
+      or config.isSource(source,label)
+      //and label = source.(TaintedPath::Source).getAFlowLabel()
+
     }
 
-    override predicate isSink(DataFlow::Node sink) { 
+    override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
       exists (float score | BoostedConfig::isSink(sink, score) and score>=minScore_snk()) 
-      or (
-        sink instanceof TaintedPath::Sink and
-        not sink instanceof ExpandedConfiguration::CandidateSink
-      ) 
+      or config.isSink(sink, label)
+      //and label = sink.(TaintedPath::Sink).getAFlowLabel()
     }
 
-    override predicate isSanitizer(DataFlow::Node node) {
-      exists (float score | BoostedConfig::isSanitizer(node, score) and score>=minScore_san()) 
-      or
-      node instanceof TaintedPath::Sanitizer
+    override predicate isBarrier(DataFlow::Node node) {
+      config.isBarrier(node)
+    }
+
+    override predicate isBarrierGuard(DataFlow::BarrierGuardNode guard) {
+      config.isBarrierGuard(guard)
+    }
+
+    override predicate isAdditionalFlowStep(
+      DataFlow::Node src, DataFlow::Node dst, DataFlow::FlowLabel srclabel,
+      DataFlow::FlowLabel dstlabel
+    ) {
+      config.isAdditionalFlowStep(src, dst, srclabel, dstlabel)
     }
   }
+
+
 }
