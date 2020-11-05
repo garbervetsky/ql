@@ -38,11 +38,26 @@ query predicate pairSrcSnkAlert(string ssrc, string ssnk){
     ssnk = snk.getconcatrep()    
     )
 }
-from DataFlow::Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
+
+from
+  DataFlow::Configuration cfg, DataFlow::Node source, DataFlow::Node sink, string filePathSink,
+  int startLineSink, int endLineSink, int startColumnSink, int endColumnSink, string filePathSource,
+  int startLineSource, int endLineSource, int startColumnSource, int endColumnSource
 where
-  (
-    cfg instanceof ExpandedConfiguration::ExpandedConfiguration
-  ) and
-  cfg.hasFlowPath(source, sink)
-select sink.getNode(), source, sink, "This query depends on $@.", source.getNode(),
-  "a user-provided value"
+  cfg instanceof ExpandedConfiguration::ExpandedConfiguration and
+  cfg.hasFlow(source, sink) and
+  sink.hasLocationInfo(filePathSink, startLineSink, startColumnSink, endLineSink, endColumnSink) and
+  source
+      .hasLocationInfo(filePathSource, startLineSource, startColumnSource, endLineSource,
+        endColumnSource)
+select source, startLineSource, startColumnSource, endLineSource, endColumnSource, filePathSource,
+  sink, startLineSink, startColumnSink, endLineSink, endColumnSink, filePathSink
+
+// from DataFlow::Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
+// where
+//   (
+//     cfg instanceof ExpandedConfiguration::ExpandedConfiguration
+//   ) and
+//   cfg.hasFlowPath(source, sink)
+// select sink.getNode(), source, sink, "This query depends on $@.", source.getNode(),
+//   "a user-provided value"
