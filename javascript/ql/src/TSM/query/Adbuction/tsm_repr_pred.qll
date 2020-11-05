@@ -5,9 +5,9 @@ module TsmRepr {
     //    or
     //   repr = "(member body (parameter 0 (parameter 1 (return (member post *)))))::(member body (parameter req (parameter 1 (return (member post *)))))::(member body (parameter req *))::(member body *)::(parameter 2 (return (member moveTorrents *)))" and t = "src" and result = 1.0 or
         
-        //   repr = "(parameter 0 (return (root https://www.npmjs.com/package/mv)))" and t = "snk" and result = 1.0 
+         repr = "(parameter 0 (return (root https://www.npmjs.com/package/mv)))" and t = "snk" and result = 1.0 
         //or
-        repr = "(parameter 1 (return (root https://www.npmjs.com/package/mv)))" and t = "snk" and result = 1.0 
+        // repr = "(parameter 1 (return (root https://www.npmjs.com/package/mv)))" and t = "snk" and result = 1.0 
     }
 }
 

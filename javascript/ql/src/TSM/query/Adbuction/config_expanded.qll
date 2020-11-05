@@ -9,12 +9,16 @@ import TSM.NodeRepresentation
 module ExpandedConfiguration {
   import semmle.javascript.security.dataflow.TaintedPath::TaintedPath
   
-  private predicate callFromImport(string library, DataFlow::CallNode call) {
-    DataFlow::moduleImport(library).getACall()=call
+  private predicate callFromImport(string library, DataFlow::InvokeNode call) {
+    DataFlow::moduleImport(library).getACall().(DataFlow::InvokeNode)=call
   }
 
   private predicate isCallBackArgument(DataFlow::Node callBack, DataFlow::InvokeNode invk) {
     callBack = invk.getABoundCallbackParameter(_,_)
+    // callBack = invk.getAnArgument() and
+    // exists (DataFlow::FunctionNode f |
+    //     f.flowsToExpr(callBack.asExpr())
+    //   ) 
   }
 
   predicate isCandidateSource(DataFlow::Node source) {
