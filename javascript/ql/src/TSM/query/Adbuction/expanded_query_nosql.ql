@@ -125,8 +125,10 @@ query predicate pairSrcSnkAlert(string ssrc, string ssnk){
     and source.getNode() = src.asDataFlowNode()
     and sink.getNode() = snk.asDataFlowNode() 
     and
-    ssrc = src.getconcatrep() and 
-    ssnk = snk.getconcatrep()    
+    // ssrc = src.getconcatrep() and 
+    // ssnk = snk.getconcatrep()    
+    ssrc = src.preciseRep(false) and 
+    ssnk = snk.preciseRep(true)  
     )
 }
 
