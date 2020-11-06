@@ -61,6 +61,10 @@ module BoostedConfigTSM {
     }    
   }
 
+  /**
+   * This is the boosting of version VWorse using sink candidates 
+   * and precluding reps from a black list
+   */
  class BoostedConfigurationTSM extends ExpandedConfiguration::ExpandedConfiguration { // TaintTracking::Configuration {
   //BoostedConfigurationTSM() { any() } //this = "BoostedConfiguration" }
 
@@ -110,47 +114,51 @@ module BoostedConfigTSM {
   }
 }
 
-// class ExpandedConfiguration extends TaintTracking::Configuration {
-//   ExpandedConfiguration() { this = "ExpandedConfiguration" }
+/**
+ * This is the V0 version boosted with new new candidates
+ * and precluding reps from a black list
+ */
+class BoostedConfigurationTSMV0 extends TaintTracking::Configuration {
+  BoostedConfigurationTSMV0() { this = "BoostedConfiguration" }
 
-//   override predicate isSource(DataFlow::Node source) { 
-//     // isCandidateSource(source) 
-//     // or 
-//     source instanceof NosqlInjectionWorse::Source 
-//   }
+  override predicate isSource(DataFlow::Node source) {
+    source instanceof NosqlInjection::Source 
+  }
 
-//   override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
-//     TaintedObject::isSource(source, label)
-//   }
+  override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
+    TaintedObject::isSource(source, label)
+  }
 
-//   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
-//     isCandidateSink(sink) 
-//     or 
-//     sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
-//   }
+  override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
+    (ExpandedConfiguration::isCandidateSink(sink)
+    and
+    not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
+    )
+    or 
+    sink.(NosqlInjection::Sink).getAFlowLabel() = label
+  }
 
-//   override predicate isSanitizer(DataFlow::Node node) {
-//     super.isSanitizer(node) or
-//     node instanceof NosqlInjectionWorse::Sanitizer
-//   }
+  override predicate isSanitizer(DataFlow::Node node) {
+    node instanceof NosqlInjection::Sanitizer
+  }
 
-//   override predicate isSanitizerGuard(TaintTracking::SanitizerGuardNode guard) {
-//     guard instanceof TaintedObject::SanitizerGuard
-//   }
+  override predicate isSanitizerGuard(TaintTracking::SanitizerGuardNode guard) {
+    guard instanceof TaintedObject::SanitizerGuard
+  }
 
-//   override predicate isAdditionalFlowStep(
-//     DataFlow::Node src, DataFlow::Node trg, DataFlow::FlowLabel inlbl, DataFlow::FlowLabel outlbl
-//   ) {
-//     TaintedObject::step(src, trg, inlbl, outlbl)
-//     or
-//     // additional flow step to track taint through NoSQL query objects
-//     inlbl = TaintedObject::label() and
-//     outlbl = TaintedObject::label() and
-//     exists(NoSQL::Query query, DataFlow::SourceNode queryObj |
-//       queryObj.flowsToExpr(query) and
-//       queryObj.flowsTo(trg) and
-//       src = queryObj.getAPropertyWrite().getRhs()
-//     )
-//   }
-//   }
+  override predicate isAdditionalFlowStep(
+    DataFlow::Node src, DataFlow::Node trg, DataFlow::FlowLabel inlbl, DataFlow::FlowLabel outlbl
+  ) {
+    TaintedObject::step(src, trg, inlbl, outlbl)
+    or
+    // additional flow step to track taint through NoSQL query objects
+    inlbl = TaintedObject::label() and
+    outlbl = TaintedObject::label() and
+    exists(NoSQL::Query query, DataFlow::SourceNode queryObj |
+      queryObj.flowsToExpr(query) and
+      queryObj.flowsTo(trg) and
+      src = queryObj.getAPropertyWrite().getRhs()
+    )
+  }
+  }
 }
