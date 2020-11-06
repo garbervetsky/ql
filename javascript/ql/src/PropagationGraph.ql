@@ -1,5 +1,5 @@
 import javascript
-import PropagationGraphs
+import TSM.PropagationGraphs
 
 predicate reachableFromSourceCandidate(
   PropagationGraph::SourceCandidate src, PropagationGraph::Node nd

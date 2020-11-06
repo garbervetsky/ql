@@ -104,6 +104,12 @@ private int minOcurrences() { result = 1 }
 
     string candidateRep(boolean asRhs) { result = candidateRep(nd, _, asRhs) }
 
+    string rep(){
+        result = candidateRep(_) and 
+        // Eliminate rare representations
+        count(Node n | n.candidateRep(_) = result) >= minOcurrences()
+    }
+
     string rep1(){
         result = candidateRep(_)
     }
