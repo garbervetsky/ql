@@ -77,7 +77,7 @@ private int minOcurrences() { result = 1 }
     Node() { this = MkNode(nd) }
 
     predicate isSourceCandidate() {
-      exists(candidateRep(_)) and
+      exists(candidateRep(false)) and
       (
         nd instanceof DataFlow::CallNode or
         nd instanceof DataFlow::PropRead or
@@ -86,11 +86,11 @@ private int minOcurrences() { result = 1 }
     }
 
     predicate isSanitizerCandidate() {
-      exists(candidateRep(_)) and nd instanceof DataFlow::CallNode
+      exists(candidateRep(false)) and nd instanceof DataFlow::CallNode
     }
 
     predicate isSinkCandidate() {
-      exists(candidateRep(_)) and
+      exists(candidateRep(true)) and
       (
         exists(DataFlow::InvokeNode invk |
           nd = invk.getAnArgument()
