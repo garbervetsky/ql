@@ -19,11 +19,12 @@ predicate sameLocationInfo(DataFlow::PathNode n1,DataFlow::PathNode n2) {
   )
 }
 
-predicate countRep(string rep, int repetitions) {
+query predicate countRep(string rep, int repetitions) {
   UnlikelyReps::getRep(rep, "snk") and
   repetitions = count(
-    DataFlow::PathNode sink | rep =  candidateRep(sink.getNode(), _, true)
+    DataFlow::Node sink | rep =  candidateRep(sink, _, true)
   )
+  and repetitions>0
 }
 
 // from DataFlow::Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink

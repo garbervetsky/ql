@@ -106,7 +106,7 @@ query predicate sinksToBlameFiltered(DataFlow::PathNode sink, int repetitions, s
                   exists(DataFlow::PathNode sink2 | 
                       sameLocationInfo(sink, sink2 ) 
                     and exists(string rep2  |   
-                      candidateRep(sink.getNode(), d) = rep2 )
+                      candidateRep(sink.getNode(), d, true) = rep2 )
                   ) 
         )
     )

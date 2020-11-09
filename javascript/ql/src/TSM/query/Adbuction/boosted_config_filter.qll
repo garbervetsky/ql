@@ -8,6 +8,7 @@ import TSM.NodeRepresentation
 import tsm_repr_pred_nosql
 import semmle.javascript.security.TaintedObject
 import config_expanded_nosql
+import backlist
 
 private float minScore_snk() { result = 0.00001}
 private float minScore_src() { result = 0.0001}
@@ -83,7 +84,11 @@ module BoostedConfigFilter {
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
     super.isSink(sink, label) 
     and
-    not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
+    not exists (string rep |  
+      BlackList::getRep(rep, "snk") and
+      rep =  candidateRep(sink, _, true)
+    )    
+    //not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
     // or sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
   }
 
@@ -113,7 +118,11 @@ class BoostedConfigFilterV0 extends TaintTracking::Configuration {
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
     (ExpandedConfiguration::isCandidateSink(sink)
     and
-    not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
+    not exists (string rep |  
+      BlackList::getRep(rep, "snk") and
+      rep =  candidateRep(sink, _, true)
+    )    
+    //not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
     )
     or 
     sink.(NosqlInjection::Sink).getAFlowLabel() = label
