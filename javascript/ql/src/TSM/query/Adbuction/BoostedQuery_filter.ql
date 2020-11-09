@@ -7,7 +7,7 @@
  * @id js/tsm-query
 */
 
-import expanded_config_tsm
+import boosted_config_filter
 import DataFlow::PathGraph
 import TSM.PropagationGraphs
 import evaluation.NosqlInjectionWorse
@@ -24,7 +24,7 @@ predicate sameLocationInfo(DataFlow::PathNode n1,DataFlow::PathNode n2) {
 query predicate compareV0vsExpanded(int new, int missing, int same) {
   new = count(
       DataFlow::PathNode source, DataFlow::PathNode sink |
-      exists(BoostedConfigTSM::BoostedConfigurationTSM cfg| 
+      exists(BoostedConfigFilter::BoostedConfigFilter cfg| 
              cfg.hasFlowPath(source, sink)
              and not exists(NosqlInjection::Configuration cfgV0,
                   DataFlow::PathNode source2, DataFlow::PathNode sink2 |
@@ -39,7 +39,7 @@ query predicate compareV0vsExpanded(int new, int missing, int same) {
     DataFlow::PathNode source, DataFlow::PathNode sink |
     exists(NosqlInjection::Configuration cfgV0| 
            cfgV0.hasFlowPath(source, sink)
-           and not exists(BoostedConfigTSM::BoostedConfigurationTSM cfg,
+           and not exists(BoostedConfigFilter::BoostedConfigFilter cfg,
                 DataFlow::PathNode source2, DataFlow::PathNode sink2 |
               cfg.hasFlowPath(source2, sink2)
               and sameLocationInfo(source, source2)
@@ -50,7 +50,7 @@ query predicate compareV0vsExpanded(int new, int missing, int same) {
    and
    same = count(
     DataFlow::PathNode source, DataFlow::PathNode sink |
-    exists(BoostedConfigTSM::BoostedConfigurationTSM cfg| 
+    exists(BoostedConfigFilter::BoostedConfigFilter cfg| 
            cfg.hasFlowPath(source, sink)
            and exists(NosqlInjection::Configuration cfgV0,
                 DataFlow::PathNode source2, DataFlow::PathNode sink2 |
@@ -65,7 +65,7 @@ query predicate compareV0vsExpanded(int new, int missing, int same) {
 query predicate compareV0vsBoosted(int new, int missing, int same) {
   new = count(
       DataFlow::PathNode source, DataFlow::PathNode sink |
-      exists(BoostedConfigTSM::BoostedConfigurationTSMV0 cfg| 
+      exists(BoostedConfigFilter::BoostedConfigFilterV0 cfg| 
              cfg.hasFlowPath(source, sink)
              and not exists(NosqlInjection::Configuration cfgV0,
                   DataFlow::PathNode source2, DataFlow::PathNode sink2 |
@@ -80,7 +80,7 @@ query predicate compareV0vsBoosted(int new, int missing, int same) {
     DataFlow::PathNode source, DataFlow::PathNode sink |
     exists(NosqlInjection::Configuration cfgV0| 
            cfgV0.hasFlowPath(source, sink)
-           and not exists(BoostedConfigTSM::BoostedConfigurationTSMV0 cfg,
+           and not exists(BoostedConfigFilter::BoostedConfigFilterV0 cfg,
                 DataFlow::PathNode source2, DataFlow::PathNode sink2 |
               cfg.hasFlowPath(source2, sink2)
               and sameLocationInfo(source, source2)
@@ -91,7 +91,7 @@ query predicate compareV0vsBoosted(int new, int missing, int same) {
    and
    same = count(
     DataFlow::PathNode source, DataFlow::PathNode sink |
-    exists(BoostedConfigTSM::BoostedConfigurationTSMV0 cfg| 
+    exists(BoostedConfigFilter::BoostedConfigFilterV0 cfg| 
            cfg.hasFlowPath(source, sink)
            and exists(NosqlInjection::Configuration cfgV0,
                 DataFlow::PathNode source2, DataFlow::PathNode sink2 |
@@ -106,7 +106,7 @@ query predicate compareV0vsBoosted(int new, int missing, int same) {
 from DataFlow::Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where
   (
-    cfg instanceof BoostedConfigTSM::BoostedConfigurationTSMV0
+    cfg instanceof BoostedConfigFilter::BoostedConfigFilterV0
   ) and
   cfg.hasFlowPath(source, sink)
 select sink.getNode(), source, sink, "This query depends on $@.", source.getNode(),

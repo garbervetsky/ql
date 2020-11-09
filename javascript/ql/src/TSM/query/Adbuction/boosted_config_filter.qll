@@ -15,7 +15,7 @@ private float minScore_src() { result = 0.0001}
 private float minScore_san() { result = 1.1}
 
 
-module BoostedConfigTSM {
+module BoostedConfigFilter {
   private import TsmRepr
   private import semmle.javascript.security.dataflow.NosqlInjectionCustomizationsWorse
   private import semmle.javascript.security.dataflow.NosqlInjectionCustomizations
@@ -65,8 +65,8 @@ module BoostedConfigTSM {
    * This is the boosting of version VWorse using sink candidates 
    * and precluding reps from a black list
    */
- class BoostedConfigurationTSM extends ExpandedConfiguration::ExpandedConfiguration { // TaintTracking::Configuration {
-  //BoostedConfigurationTSM() { any() } //this = "BoostedConfiguration" }
+ class BoostedConfigFilter extends ExpandedConfiguration::ExpandedConfiguration { // TaintTracking::Configuration {
+  //BoostedConfigFilter() { any() } //this = "BoostedConfiguration" }
 
   override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
     not exists (float score |  TSM::isSource(source, score) and score>=minScore_src()) 
@@ -78,33 +78,14 @@ module BoostedConfigTSM {
     not exists (float score |  TSM::isSource(source, score) and score>=minScore_src()) 
     and
     super.isSource(source)
-    // source instanceof NosqlInjectionWorse::Source
-    // or
-    // source instanceof NosqlInjection::Source
+    // or source instanceof NosqlInjectionWorse::Source
   }
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
     super.isSink(sink, label) 
     and
     not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
-    // sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
+    // or sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
   }
-
-  // override predicate isSink(DataFlow::Node sink) { 
-  //   (
-  //      exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
-  //     and super.isSink(sink) 
-  //     // or sink instanceof NosqlInjection::Sink
-  //     // and 
-  //     // exists (DataFlow::InvokeNode call |
-  //     //   sink  = call.getAnArgument() or 
-  //     //   sink = call.(DataFlow::CallNode).getReceiver()
-  //     // )
-  //   ) 
-  //   // or
-  //   // sink instanceof NosqlInjectionWorse::Sink
-  //   // or
-  //   // sink instanceof NosqlInjection::Source
-  // }
 
   override predicate isSanitizer(DataFlow::Node node) {
     super.isSanitizer(node)
@@ -118,8 +99,8 @@ module BoostedConfigTSM {
  * This is the V0 version boosted with new new candidates
  * and precluding reps from a black list
  */
-class BoostedConfigurationTSMV0 extends TaintTracking::Configuration {
-  BoostedConfigurationTSMV0() { this = "BoostedConfiguration" }
+class BoostedConfigFilterV0 extends TaintTracking::Configuration {
+  BoostedConfigFilterV0() { this = "BoostedConfiguration" }
 
   override predicate isSource(DataFlow::Node source) {
     source instanceof NosqlInjection::Source 
