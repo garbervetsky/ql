@@ -62,34 +62,44 @@ module BoostedConfigFilter {
     }    
   }
 
+  predicate blackListedSource(DataFlow::Node sink) {
+    exists (string rep |  
+      BlackList::getRep(rep, "src") and
+      rep =  candidateRep(sink, _, false)
+    )    
+  }
+
+  predicate blackListedSink(DataFlow::Node sink) {
+    exists (string rep |  
+      BlackList::getRep(rep, "snk") and
+      rep =  candidateRep(sink, _, true)
+    )    
+  }
   /**
    * This is the boosting of version VWorse using sink candidates 
    * and precluding reps from a black list
    */
  class BoostedConfigFilter extends ExpandedConfiguration::ExpandedConfiguration { // TaintTracking::Configuration {
-  //BoostedConfigFilter() { any() } //this = "BoostedConfiguration" }
+  BoostedConfigFilter() {  this = "BoostedConfigFilter" }
 
-  override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
-    not exists (float score |  TSM::isSource(source, score) and score>=minScore_src()) 
-    and 
-    super.isSource(source, label)
-  }
+  // override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
+  //   not exists (float score |  TSM::isSource(source, score) and score>=minScore_src()) 
+  //   and 
+  //   super.isSource(source, label)
+  // }
 
-  override predicate isSource(DataFlow::Node source) { 
-    not exists (float score |  TSM::isSource(source, score) and score>=minScore_src()) 
-    and
-    super.isSource(source)
-    // or source instanceof NosqlInjectionWorse::Source
-  }
+  // override predicate isSource(DataFlow::Node source) { 
+  //   not exists (float score |  TSM::isSource(source, score) and score>=minScore_src()) 
+  //   and
+  //   super.isSource(source)
+  //   // or source instanceof NosqlInjectionWorse::Source
+  // }
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
-    super.isSink(sink, label) 
-    and
-    not exists (string rep |  
-      BlackList::getRep(rep, "snk") and
-      rep =  candidateRep(sink, _, true)
+    (super.isSink(sink, label) 
+      and not blackListedSink(sink)
     )    
     //not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
-    // or sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
+    or sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
   }
 
   override predicate isSanitizer(DataFlow::Node node) {
@@ -117,19 +127,61 @@ class BoostedConfigFilterV0 extends TaintTracking::Configuration {
 
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
     (ExpandedConfiguration::isCandidateSink(sink)
-    and
-    not exists (string rep |  
-      BlackList::getRep(rep, "snk") and
-      rep =  candidateRep(sink, _, true)
+      and not blackListedSink(sink)
     )    
     //not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
-    )
     or 
     sink.(NosqlInjection::Sink).getAFlowLabel() = label
   }
 
   override predicate isSanitizer(DataFlow::Node node) {
     node instanceof NosqlInjection::Sanitizer
+  }
+
+  override predicate isSanitizerGuard(TaintTracking::SanitizerGuardNode guard) {
+    guard instanceof TaintedObject::SanitizerGuard
+  }
+
+  override predicate isAdditionalFlowStep(
+    DataFlow::Node src, DataFlow::Node trg, DataFlow::FlowLabel inlbl, DataFlow::FlowLabel outlbl
+  ) {
+    TaintedObject::step(src, trg, inlbl, outlbl)
+    or
+    // additional flow step to track taint through NoSQL query objects
+    inlbl = TaintedObject::label() and
+    outlbl = TaintedObject::label() and
+    exists(NoSQL::Query query, DataFlow::SourceNode queryObj |
+      queryObj.flowsToExpr(query) and
+      queryObj.flowsTo(trg) and
+      src = queryObj.getAPropertyWrite().getRhs()
+    )
+  }
+  }
+  /**
+ * This is the VWorse version boosted with  new candidates
+ * and precluding reps from a black list
+ */
+class BoostedConfigFilterWorse extends TaintTracking::Configuration {
+  BoostedConfigFilterWorse() { this = "BoostedConfiguration" }
+
+  override predicate isSource(DataFlow::Node source) {
+    source instanceof NosqlInjectionWorse::Source 
+  }
+
+  override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
+    TaintedObject::isSource(source, label)
+  }
+
+  override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
+    (ExpandedConfiguration::isCandidateSink(sink)
+    and not blackListedSink(sink)
+    )
+    or 
+    sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
+  }
+
+  override predicate isSanitizer(DataFlow::Node node) {
+    node instanceof NosqlInjectionWorse::Sanitizer
   }
 
   override predicate isSanitizerGuard(TaintTracking::SanitizerGuardNode guard) {
