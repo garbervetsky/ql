@@ -157,11 +157,25 @@ query predicate compareV0vsWorseBoostedSinks(DataFlow::PathNode sinkNew, string 
                 and sameLocationInfo(sink, sink2)
               )
         and sink = sinkNew
-        and rep = BoostedConfigFilter::repSink(sinkNew.getNode())  
-
+        //and rep = BoostedConfigFilter::repSink(sinkNew.getNode())  
       )
      )
+     and rep = depthRep(sinkNew)      
 }
+
+string depthRep(DataFlow::PathNode sink) {
+  exists( int maxDepth |  maxDepth > 0
+        and result  =  candidateRep(sink.getNode(), maxDepth, true) 
+        and maxDepth = max( int d | 
+                  exists(DataFlow::PathNode sink2 | 
+                      sameLocationInfo(sink, sink2 ) 
+                    and exists(string rep2  |   
+                      candidateRep(sink.getNode(), d, true) = rep2 )
+                  ) 
+        )
+    )
+}
+
 
 query predicate compareV0vsWorseBoosted(int new, int missing, int same) {
   new = count(

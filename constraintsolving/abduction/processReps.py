@@ -72,13 +72,50 @@ def processQueryUnlikelyRep(projectFileName, outputFile):
         print(rep, ',', len(repsDict[rep]))
 
 
+def processVsReprSinks(projectFileName, outputFile):
+    projectRSDict  = dict()
+    repsDict  = dict()
+    project = ""
+    data = open(projectFileName,'r', errors='replace', encoding='utf-8').readlines()
+    print('rep, count')
+    for line in data:
+        if line.startswith("\"sinkNew\""):
+            continue
+        if line.startswith("Analyzing"):
+            project = line.replace("Analyzing ","").strip()
+            continue
+        line = line.strip()
+        sink= line.split(',')[0]
+        rep = line.split(',')[1]
+        projectSinkRep = (project, sink, rep) 
+        if projectSinkRep not in projectRSDict.keys():
+            projectRSDict[projectSinkRep] = 1
+        else: 
+            projectRSDict[projectSinkRep] = projectRSDict[projectSinkRep] + 1
+
+        if rep not in repsDict.keys():
+            repsDict[rep] = 1
+        else:
+            repsDict[rep] = repsDict[rep] + 1
+
+        #print(project,', ', line)
+    oldProject = ""
+    for projectRS in projectRSDict.keys():
+        (project, sink, rep) = projectRS     
+        if oldProject != project:
+            print(project)
+        print(sink, ':', rep, '=', projectRSDict[projectRS])
+        oldProject = project
+    # for rep in repsDict.keys():    
+    #     print(rep,',', repsDict[rep])
+
 
 parser = argparse.ArgumentParser()
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s\t%(asctime)s] %(name)s\t%(message)s")
 
 parser.add_argument("--input", dest="fileName", required=True, type=str)
 parser.add_argument("--kind", dest="kind", required=False, type=str, default="diff",
-                    choices=["diff", "repr", "unlikely"],
+                    choices=["diff", "repr", "unlikely","vs"],
                     help="Kind of file to process")
 parser.add_argument("--output", dest="outputFileName", required=True, type=str)
 
@@ -98,3 +135,6 @@ else:
         if kind == 'unlikely':
             processQueryUnlikelyRep(fileName, outputFileName)
             #(projectFileName = "/persistent/experiments/nosql/unlikely.txt")
+        else: 
+            if kind== 'vs':
+                processVsReprSinks(fileName, outputFileName)
