@@ -25,6 +25,10 @@ module BoostedConfigFilter {
       result = candidateRep(node, _)
   }
 
+  string repSink(DataFlow::Node node){
+    result = candidateRep(node, _, true)
+}
+
   predicate testSink2(DataFlow::Node node, string repr) 
   {
       repr = rep(node) 

@@ -145,6 +145,24 @@ query predicate compareWorsevsBoosted(int new, int missing, int same) {
    )
 }
 
+query predicate compareV0vsWorseBoostedSinks(DataFlow::PathNode sinkNew, string rep) {
+  exists(
+      DataFlow::PathNode source, DataFlow::PathNode sink |
+      exists(BoostedConfigFilter::BoostedConfigFilterWorse cfg| 
+             cfg.hasFlowPath(source, sink)
+             and not exists(NosqlInjection::Configuration cfgV0,
+                  DataFlow::PathNode source2, DataFlow::PathNode sink2 |
+                cfgV0.hasFlowPath(source2, sink2)
+                and sameLocationInfo(source, source2)
+                and sameLocationInfo(sink, sink2)
+              )
+        and sink = sinkNew
+        and rep = BoostedConfigFilter::repSink(sinkNew.getNode())  
+
+      )
+     )
+}
+
 query predicate compareV0vsWorseBoosted(int new, int missing, int same) {
   new = count(
       DataFlow::PathNode source, DataFlow::PathNode sink |
