@@ -6,7 +6,7 @@
 import javascript
 import tsm.NodeRepresentation
 import semmle.javascript.security.TaintedObject
-import ExcludeList
+import tsm.evaluation.ExcludeList
 import tsm.evaluation.NosqlInjectionWorseCustomizations
 
 /**
