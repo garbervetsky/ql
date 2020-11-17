@@ -7,7 +7,7 @@
  * @id js/tsm-query
 */
 
-import boosted_config_filter
+import BoostedConfigFilter
 import DataFlow::PathGraph
 
 module FilterKnows {

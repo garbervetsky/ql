@@ -6,7 +6,7 @@
 import javascript
 import tsm.NodeRepresentation
 import semmle.javascript.security.TaintedObject
-import blacklist
+import ExcludeList
 import tsm.evaluation.NosqlInjectionWorseCustomizations
 
 /**
@@ -61,16 +61,16 @@ module Expanded {
 
 }
 
-predicate blackListedSource(DataFlow::Node source) {
+predicate excludeListedSource(DataFlow::Node source) {
   exists (string rep |  
-    BlackList::getRep(rep, "src") and
+    ExcludeList::getRep(rep, "src") and
     rep =  candidateRep(source, _, false)
   )    
 }
 
-predicate blackListedSink(DataFlow::Node sink) {
+predicate excludeListedSink(DataFlow::Node sink) {
   exists (string rep |  
-    BlackList::getRep(rep, "snk") and
+    ExcludeList::getRep(rep, "snk") and
     //rep =  candidateRep(sink, _, true)
     rep = chooseBestRep(sink)
   )    
@@ -100,7 +100,7 @@ string maximalRep(DataFlow::PathNode sink) {
 
 // /**
 //  * This is the V0 version boosted (only sinks) with new new candidates
-//  * and precluding reps from a black list
+//  * and precluding reps from a exclude list
 //  */
 // module BoostedNoSql {
 //   import semmle.javascript.security.dataflow.NosqlInjectionCustomizations
@@ -118,7 +118,7 @@ string maximalRep(DataFlow::PathNode sink) {
 
 //     override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
 //       (Expanded::isCandidateSink(sink)
-//         and not blackListedSink(sink)
+//         and not excludeListedSink(sink)
 //       )    
 //       //not exists (float score | TSM::isSink(sink, score) and score>=minScore_snk())
 //       or 
@@ -151,7 +151,7 @@ string maximalRep(DataFlow::PathNode sink) {
 // }
   /**
  * This is the VWorse version boosted (only sinks) with new candidates
- * and precluding reps from a black list
+ * and precluding reps from a exclude list
  */
 
 module BoostedNoSqlWorse {
@@ -168,7 +168,7 @@ class BoostedConfigFilterWorse extends TaintTracking::Configuration {
 
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
     (Expanded::isCandidateSink(sink)
-     and not blackListedSink(sink)
+     and not excludeListedSink(sink)
     )
     or 
     sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label

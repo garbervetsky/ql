@@ -11,8 +11,6 @@ import config_expanded_nosql
 import DataFlow::PathGraph
 import tsm.evaluation.NosqlInjectionWorse
 import semmle.javascript.security.dataflow.NosqlInjection
-//import tsm.PropagationGraphs
-
 
 query predicate compareAlertsCount(int vWorse, int v0, int vExpanded) {
   vExpanded = count(DataFlow::PathNode source, DataFlow::PathNode sink |

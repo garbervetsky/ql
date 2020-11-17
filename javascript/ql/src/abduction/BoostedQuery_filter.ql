@@ -7,7 +7,7 @@
  * @id js/tsm-query
 */
 
-import boosted_config_filter
+import abduction.BoostedConfigFilter
 import DataFlow::PathGraph
 import tsm.evaluation.NosqlInjectionWorse
 import semmle.javascript.security.dataflow.NosqlInjection

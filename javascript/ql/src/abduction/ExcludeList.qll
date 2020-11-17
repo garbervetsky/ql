@@ -1,4 +1,4 @@
-module BlackList {
+module ExcludeList {
     predicate getRep(string repr, string t){
         t = "snk" and
         // Unlikely

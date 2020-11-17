@@ -1,5 +1,5 @@
 /**
- * Provides a taint tracking configuration for reasoning about Seldon's paper example 
+ * Provides a taint tracking configuration based on the "abduction" approach 
  *
  */
 
@@ -7,7 +7,7 @@ import javascript
 import tsm.NodeRepresentation
 import semmle.javascript.security.TaintedObject
 import config_expanded_nosql
-import blacklist
+import ExcludeList
 
 
 module BoostedConfigFilter {
@@ -29,23 +29,23 @@ module BoostedConfigFilter {
   }
 
 
-  predicate blackListedSource(DataFlow::Node source) {
+  predicate excludeListedSource(DataFlow::Node source) {
     exists (string rep |  
-      BlackList::getRep(rep, "src") and
+      ExcludeList::getRep(rep, "src") and
       rep =  candidateRep(source, _, false)
     )    
   }
 
-  predicate blackListedSink(DataFlow::Node sink) {
+  predicate excludeListedSink(DataFlow::Node sink) {
     exists (string rep |  
-      BlackList::getRep(rep, "snk") and
+      ExcludeList::getRep(rep, "snk") and
       //rep =  chooseBestRep(sink)
       rep = candidateRep(sink, _ , true)
     )    
   }
 
-  predicate blackListedSink(DataFlow::Node sink, string rep) {
-    BlackList::getRep(rep, "snk") and
+  predicate excludeListedSink(DataFlow::Node sink, string rep) {
+    ExcludeList::getRep(rep, "snk") and
     rep =  chooseBestRep(sink)
 }
 
@@ -84,7 +84,7 @@ string maximalRep(DataFlow::Node sink) {
 
 /**
  * This is the V0 version boosted with new new candidates
- * and precluding reps from a black list
+ * and precluding reps from a exclude list
  */
 class BoostedConfigFilterV0 extends TaintTracking::Configuration {
   BoostedConfigFilterV0() { this = "BoostedConfigFilterV0" }
@@ -99,7 +99,7 @@ class BoostedConfigFilterV0 extends TaintTracking::Configuration {
 
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
     (ExpandedConfiguration::isCandidateSink(sink)
-      and not blackListedSink(sink)
+      and not excludeListedSink(sink)
     )    
     or 
     sink.(NosqlInjection::Sink).getAFlowLabel() = label
@@ -130,7 +130,7 @@ class BoostedConfigFilterV0 extends TaintTracking::Configuration {
   }
   /**
  * This is the VWorse version boosted with  new candidates
- * and precluding reps from a black list
+ * and precluding reps from a exclude list
  */
 class BoostedConfigFilterWorse extends TaintTracking::Configuration {
   BoostedConfigFilterWorse() { this = "BoostedConfigFilterWorse" }
@@ -145,7 +145,7 @@ class BoostedConfigFilterWorse extends TaintTracking::Configuration {
 
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
     (ExpandedConfiguration::isCandidateSink(sink)
-    and not blackListedSink(sink)
+    and not excludeListedSink(sink)
     )
     or 
     sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
