@@ -12,11 +12,11 @@ module ExpandedConfiguration {
   import tsm.ApiGraphs
 
   private string targetLibrary() { 
-    // result = "mongoose" 
-    // or result = "mongodb"
-    exists(API::Node imp | 
-        imp = API::moduleImport(result)
-    )
+    result = "mongoose" 
+    or result = "mongodb"
+    // exists(API::Node imp | 
+    //     imp = API::moduleImport(result)
+    // )
   }
 
   predicate test(DataFlow::InvokeNode invk) {
