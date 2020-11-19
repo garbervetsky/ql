@@ -71,7 +71,7 @@ private int minOcurrences() { result = 1 }
    * A propagation-graph node, or "event" in Merlin terminology (cf Section 5.1 of
    * Seldon paper).
    */
-  class Node extends TNode {
+   class Node extends TNode {
     DataFlow::Node nd;
 
     Node() { this = MkNode(nd) }
@@ -104,15 +104,37 @@ private int minOcurrences() { result = 1 }
 
     string candidateRep(boolean asRhs) { result = candidateRep(nd, _, asRhs) }
 
+
+      /**
+      * Choose one repr for a sink
+      * Prioritizes the use of member instead of receivers
+      */
+      string chooseBestRep(DataFlow::Node sink, boolean asRhs) {
+        result = max(string rep, int depth, int score | 
+          rep = candidateRep(sink, depth, asRhs) 
+          and score = count (  rep.indexOf("member"))*4
+          +  count (  rep.indexOf("return"))*2
+          +  count (  rep.indexOf("parameter"))*3
+          // Penalizes the receivers againts members
+          -  count (  rep.indexOf("parameter -1"))*4
+          | rep order by score, depth, rep) 
+      }
+
     string rep(){
-        result = candidateRep(_) and 
-        // Eliminate rare representations
-        count(Node n | n.candidateRep(_) = result) >= minOcurrences()
+      result = this.rep(_)
+        // result = candidateRep(_) and 
+        // // Eliminate rare representations
+        // count(Node n | n.candidateRep(_) = result) >= minOcurrences()
     }
   
     string getconcatrep(){
-      result = strictconcat(string r | r = this.rep() | r, "::")
+      result = this.getconcatrep(_)    
     }
+
+    string getconcatrep(boolean rhs){
+      result = strictconcat(string r | r = this.rep(rhs) | r, "::")
+    }
+
 
     string rep1(){
         result = candidateRep(_)
@@ -129,7 +151,9 @@ private int minOcurrences() { result = 1 }
      * chooses the former representation, if it is false the latter.
      */
     string rep(boolean asRhs) {
-      result = candidateRep(asRhs) and
+      // Diego: Force only one "canonical" Repr
+      result = chooseBestRep(nd, asRhs) and
+      // result = candidateRep(asRhs) and
       // eliminate rare representations
       count(Node n | n.candidateRep(_) = result) >= minOcurrences()
     }
@@ -213,7 +237,9 @@ private int minOcurrences() { result = 1 }
   }
 
   class SanitizerCandidate extends Node {
-    SanitizerCandidate() { exists(candidateRep(false)) and nd instanceof DataFlow::InvokeNode }
+    SanitizerCandidate() { 
+      exists(candidateRep(false)) and nd instanceof DataFlow::InvokeNode
+    }
 
     override string rep() { result = rep(false) }
 
@@ -232,6 +258,7 @@ private int minOcurrences() { result = 1 }
         or
         nd = any(DataFlow::PropWrite pw).getRhs()
       )
+      // and isCandidateSink(nd, _)
     }
 
     override string rep() { result = rep(true) }

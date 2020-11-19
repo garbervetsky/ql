@@ -5,6 +5,8 @@
 
 import javascript
 import PropagationGraphs
+import semmle.javascript.security.dataflow.NosqlInjectionCustomizationsWorse
+
 
 predicate reachableFromSourceCandidate(
   PropagationGraph::SourceCandidate src, PropagationGraph::Node nd
@@ -90,9 +92,12 @@ query predicate pairSanSnk(string ssan, string ssnk){
   exists(PropagationGraph::SourceCandidate src, 
     PropagationGraph::SanitizerCandidate san, 
     PropagationGraph::SinkCandidate snk |
-      reachableFromSourceCandidate(src, san) and
+    reachableFromSourceCandidate(src, san) and
       src.asDataFlowNode().getEnclosingExpr() != san.asDataFlowNode().getEnclosingExpr() and
       reachableFromSanitizerCandidate(san, snk) and
+      // We keep only sinks that are candidates
+      // (parameters of library functions)
+      isCandidateSink(snk.asDataFlowNode(), _) and
       ssan = san.getconcatrep() and 
       ssnk = snk.getconcatrep()    
       )

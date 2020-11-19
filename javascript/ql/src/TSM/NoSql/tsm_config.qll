@@ -6,8 +6,8 @@
 import javascript
 import semmle.javascript.security.dataflow.NosqlInjection
 import semmle.javascript.security.dataflow.NosqlInjectionCustomizationsWorse
-private float minScore_snk() { result = 0.1}
-private float minScore_src() { result = 1}
+private float minScore_snk() { result = 0.01}
+private float minScore_src() { result = 1.1}
 // Score>1 to ignore sanitizers
 private float minScore_san() { result = 1.1}
 
@@ -37,7 +37,7 @@ module TSMConfig {
     override predicate isSanitizer(DataFlow::Node node) {
       exists (float score | TSM::isSanitizer(node, score) and score>=minScore_san()) 
       or
-      node instanceof NosqlInjection::Sanitizer
+      node instanceof NosqlInjectionWorse::Sanitizer
     }
 
     override predicate isSanitizerGuard(TaintTracking::SanitizerGuardNode guard) {
