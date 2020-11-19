@@ -1,1 +1,1 @@
-from wrapper import CodeQLWrapper
+from .wrapper import CodeQLWrapper

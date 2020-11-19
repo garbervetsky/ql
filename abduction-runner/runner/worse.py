@@ -1,8 +1,11 @@
+import logging
 from codeql import CodeQLWrapper
 
-db=""
+db="/persistent/experiments/nosql/1046224544_fontend_19c10c3"
 query_file="/persistent/diegog/repo2/codeql/javascript/ql/src/abduction/expanded_query_nosql.ql"
-bqrsfile="brqs/$1.brqs"
+bqrsfile="test.brqs"
+
+logging.basicConfig(level=logging.INFO)
 
 def run():
     wrapper = CodeQLWrapper()

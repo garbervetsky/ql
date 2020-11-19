@@ -2,9 +2,6 @@ import os
 import subprocess
 import logging
 
-from orchestration import global_config
-
-
 class CodeQLWrapper:
     """CodeQLWrapper is a codeql wrapper in Python. It finds the codeql executable through
     the $CODEQL environment variable.
@@ -13,7 +10,7 @@ class CodeQLWrapper:
     def __init__(self):
         try:
             # TODO: Check that file exists, and it's codeql?
-            self._code_ql_binary_path = global_config.codeql_executable
+            self._code_ql_binary_path = "codeql"
             self._logs_directory = "logs/"
             self._logger = logging.getLogger(self.__class__.__name__)
         except KeyError:
@@ -76,9 +73,10 @@ class CodeQLWrapper:
 
         self._logger.info(
             "Running 'bqrs decode' for bqrs_file=[%s] and result_set=[%s]", bqrs_file, result_set)
-        self._run_process(command_and_arguments)
 
-    def _run_process(self, command_and_arguments):
+        return self._run_process(command_and_arguments)
+
+    def _run_process(self, command_and_arguments) -> str:
         self._logger.debug("command issued: %s",
                            " ".join(command_and_arguments))
         try:
