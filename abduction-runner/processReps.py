@@ -4,6 +4,7 @@ import sys
 import argparse
 import logging
 import numpy
+import pandas as pd
 from typing import List
 
 
@@ -22,6 +23,7 @@ def processQueryDiffConfig(projectFileName, outputFile):
 
 
 def processQueryReprSinks(projectFileName, outputFile):
+
     repsProjectDict  = dict()
     repsDict  = dict()
     projectRSDict = dict()
