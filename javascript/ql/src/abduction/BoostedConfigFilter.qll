@@ -8,6 +8,7 @@ import tsm.NodeRepresentation
 import semmle.javascript.security.TaintedObject
 import config_expanded_nosql
 import abduction.ExcludeList
+import abduction.InclusionList
 
 
 module BoostedConfigFilter {
@@ -39,15 +40,24 @@ module BoostedConfigFilter {
   predicate excludeListedSink(DataFlow::Node sink) {
     exists (string rep |  
       ExcludeList::getRep(rep, "snk") and
-      //rep =  chooseBestRep(sink)
-      rep = candidateRep(sink, _ , true)
+      rep =  chooseBestRep(sink)
+      // rep = candidateRep(sink, _ , true)
     )    
   }
 
   predicate excludeListedSink(DataFlow::Node sink, string rep) {
     ExcludeList::getRep(rep, "snk") and
     rep =  chooseBestRep(sink)
-}
+  }
+
+  predicate includeListedSink(DataFlow::Node sink, string rep) {
+    InclusionList::getRep(rep, "snk") and
+    //rep =  chooseBestRep(sink)
+    rep = candidateRep(sink, _, true)
+  }
+  predicate includeListedSink(DataFlow::Node sink) {
+    includeListedSink(sink, _)
+  }
 
 /**
  * Choose one repr for a sink
@@ -98,9 +108,12 @@ class BoostedConfigFilterV0 extends TaintTracking::Configuration {
   }
 
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
-    (ExpandedConfiguration::isCandidateSink(sink)
-      and not excludeListedSink(sink)
-    )    
+    // (ExpandedConfiguration::isCandidateSink(sink)
+    //   and not excludeListedSink(sink)
+    // )    
+    // or 
+    // sink.(NosqlInjection::Sink).getAFlowLabel() = label
+    includeListedSink(sink)
     or 
     sink.(NosqlInjection::Sink).getAFlowLabel() = label
   }
