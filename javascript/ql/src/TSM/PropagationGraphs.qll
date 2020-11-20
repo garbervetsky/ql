@@ -152,8 +152,8 @@ private int minOcurrences() { result = 1 }
      */
     string rep(boolean asRhs) {
       // Diego: Force only one "canonical" Repr
-      result = chooseBestRep(nd, asRhs) and
-      // result = candidateRep(asRhs) and
+      // result = chooseBestRep(nd, asRhs) and
+      result = candidateRep(asRhs) and
       // eliminate rare representations
       count(Node n | n.candidateRep(_) = result) >= minOcurrences()
     }
