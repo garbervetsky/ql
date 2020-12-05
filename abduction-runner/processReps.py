@@ -4,7 +4,7 @@ import sys
 import argparse
 import logging
 import numpy
-import pandas as pd
+# import pandas as pd
 from typing import List
 
 
@@ -13,14 +13,20 @@ def processQueryDiffConfig(projectFileName, outputFile):
     project = ""
     data = open(projectFileName,'r', errors='replace', encoding='utf-8').readlines()
     print('project, new, missing, same')
+    new = missing = same = 0
     for line in data:
         if line.startswith("\"new\""):
             continue
         if line.startswith("Analyzing"):
             project = line.replace("Analyzing ","").strip()
             continue
-        print(project,',', line.strip())
-
+        print(project,',', line.strip()) 
+        triple = line.split(',')       
+        new = new + int(triple[0])
+        missing = missing + int(triple[1])
+        same = same + int(triple[2])
+    print('Total',',', new, ',', missing,',', same)
+ 
 
 def processQueryReprSinks(projectFileName, outputFile):
 
@@ -84,6 +90,7 @@ def processQueryReprSinks(projectFileName, outputFile):
             withoutOutliers = sum(final_list)
             projectCountString = str(projectCountDict).replace(',',';')
             print(rep,',',sorted_dict[rep],',', projectsCount,',',withoutOutliers,',',projectCountString)
+    
                 
 
 def processQueryReprSinksPerProject(projectFileName, outputFile):
@@ -149,16 +156,37 @@ def processVsReprSinks(projectFileName, outputFile):
     repsDict  = dict()
     project = ""
     data = open(projectFileName,'r', errors='replace', encoding='utf-8').readlines()
-    print('rep, count')
+    print('rep, projects')
+    hasScore = False
+    hasLibrary = False
     for line in data:
         if line.startswith("\"sinkNew\""):
+            if  "\"score\"" in line:
+                hasScore = True
+            if  "\"library\"" in line:
+                hasLibrary = True
             continue
         if line.startswith("Analyzing"):
             project = line.replace("Analyzing ","").strip()
             continue
         line = line.strip()
-        sink= line.split(',')[0]
-        rep = line.split(',')[1]
+        # there are sinks with commas, that complicated the processing  
+        columns = line.split(',') 
+        #print(line)
+        pos = len(columns)-2
+        library = ""
+        if hasLibrary:
+            library = columns[pos+1]
+            pos = pos - 1
+        if hasScore:
+            score = columns[pos+1]
+            pos = pos - 1
+
+        sink = columns[pos]
+        rep = columns[pos+1]+' lib:'+library
+        
+        # sink= line.split(',')[0]
+        # rep = line.split(',')[1]
         pr = (project, rep) 
         if pr not in projectRSDict.keys():
             projectRSDict[pr] = dict()
@@ -185,8 +213,12 @@ def processVsReprSinks(projectFileName, outputFile):
         total = sum(sinkDict.values())
         print(rep, ':', sinks,  '=', total)
         oldProject = project
-    # for rep in repsDict.keys():    
-    #     print(rep,',', repsDict[rep])
+    
+    print('=========')
+    print('rep, count')
+    sorted_dict = {k: v for k, v in sorted(repsDict.items(), key=lambda item: -item[1])}
+    for rep in sorted_dict.keys():    
+        print(rep,',', repsDict[rep])
 
 
 parser = argparse.ArgumentParser()
