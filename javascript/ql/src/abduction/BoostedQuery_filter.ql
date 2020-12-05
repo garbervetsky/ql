@@ -7,7 +7,7 @@
  * @id js/tsm-query
 */
 
-import abduction.BoostedConfigFilter
+import BoostedConfigFilter
 import DataFlow::PathGraph
 import tsm.evaluation.NosqlInjectionWorse
 import semmle.javascript.security.dataflow.NosqlInjection
@@ -115,7 +115,7 @@ query predicate compareNewV0vsWorseBoostedSinks(DataFlow::PathNode sinkNew, stri
                 and sameLocationInfo(sink, sink2)
               )
         and sink = sinkNew
-        and rep = BoostedConfigFilter::chooseBestRep(sinkNew.getNode()) 
+        and rep = ReprHelpers::chooseBestRep(sinkNew.getNode(), true) 
         //and rep = candidateRep(sinkNew.getNode(), _, _) 
       )
      )     
@@ -134,7 +134,7 @@ query predicate compareMissedVWvsWorseBoostedSinks(DataFlow::PathNode sinkNew, s
                 and sameLocationInfo(sink, sink2)
           )
           and sinkNew = sink2
-          and rep = BoostedConfigFilter::chooseBestRep(sinkNew.getNode())    
+          and rep = ReprHelpers::chooseBestRep(sinkNew.getNode(), true)    
           // and rep = BoostedConfigFilter::maximalRep(sinkNew.getNode())
   )
   

@@ -10,24 +10,84 @@ import config_expanded_nosql
 import abduction.ExcludeList
 import abduction.InclusionList
 
+module ReprHelpers {
+  /**
+  * Choose one repr for a sink
+  * Prioritizes the use of member instead of receivers
+  */
+ string chooseBestRep2(DataFlow::Node sink, boolean asRhs) {
+  result = max(string rep, int depth, int score | 
+    rep = candidateRep(sink, depth, asRhs) 
+    and score = count (  rep.indexOf("member"))*4
+    +  count (  rep.indexOf("return"))*3
+    +  count (  rep.indexOf("parameter"))*5
+    // Penalizes the receivers againts members
+    -  count (  rep.indexOf("parameter -1"))*8
+    | rep order by score, depth, rep) 
+  }
 
-module BoostedConfigFilter {
-  private import tsm.evaluation.NosqlInjectionWorseCustomizations 
-  private import semmle.javascript.security.dataflow.NosqlInjectionCustomizations
+  /**
+ * Select one 'candidate'repr. 
+ * Prioritizes the canonical repr on the form:
+ * (parameter x (return (member F (root package))))
+ */
+string chooseBestRep(DataFlow::Node sink, boolean asRhs) {
+  result = max(string rep, int depth, int score | 
+    rep = candidateRep(sink, depth, asRhs) and
+      exists(int cm, int cr, int cp, int cpr, int croot, int plus |
+        cm = count (rep.indexOf("member")) and
+        cr = count (rep.indexOf("return")) and
+        cp = count (rep.indexOf("parameter")) and 
+        cpr = count (rep.indexOf("parameter -1")) and
+        croot = count (rep.indexOf("(root ")) and
+        (
+          (cm = 1 and cr = 1 and cp = 1 and croot = 1 and cpr = 0 and plus = 200)
+          or
+          (cm = 1 and cr = 1 and cp = 1 and cpr = 0 and plus = 80)
+           or 
+           plus = 0) and
+        // Penalizes the receivers againts members
+        score = cm*4 +  cr*3 +  cp*5  -  cpr *8 + plus
+      )
+    | rep order by score, depth, rep) 
+}
 
+  string maximalRep2(DataFlow::Node sink) {
+    // result = max(string rep, int depth | rep = candidateRep(sink.getNode(), depth, true) | rep order by depth, rep)
+    result =  max(string rep | 
+      exists( int maxDepth |  maxDepth > 0
+          and rep  =  candidateRep(sink, maxDepth, true) 
+          and maxDepth = max( int d | exists(string rep2  |   
+                        candidateRep(sink, d, true) = rep2 )
+                    ) 
+          )
+      )
+  }
+
+  string maximalRep(DataFlow::Node sink) {
+    result = max(string rep, int depth | 
+      rep = candidateRep(sink, depth, true) | rep order by depth, rep)
+  }
   string rep(DataFlow::Node node){
-      result = candidateRep(node, _)
+    result = candidateRep(node, _)
   }
 
   string repSink(DataFlow::Node node){
     result = candidateRep(node, _, true)
-}
+  }
 
   predicate testSink2(DataFlow::Node node, string repr) 
   {
       repr = rep(node) 
       and repr.indexOf("/mv") >0
   }
+}
+
+module BoostedConfigFilter {
+  private import tsm.evaluation.NosqlInjectionWorseCustomizations 
+  private import semmle.javascript.security.dataflow.NosqlInjectionCustomizations
+
+
 
 
   predicate excludeListedSource(DataFlow::Node source) {
@@ -39,57 +99,25 @@ module BoostedConfigFilter {
 
   predicate excludeListedSink(DataFlow::Node sink) {
     exists (string rep |  
-      ExcludeList::getRep(rep, "snk") and
-      rep =  chooseBestRep(sink)
-      // rep = candidateRep(sink, _ , true)
+      excludeListedSink(sink, rep)
     )    
   }
 
   predicate excludeListedSink(DataFlow::Node sink, string rep) {
     ExcludeList::getRep(rep, "snk") and
-    rep =  chooseBestRep(sink)
+    rep =  ReprHelpers::chooseBestRep(sink, true)
+    // rep = candidateRep(sink, _, true)
   }
 
   predicate includeListedSink(DataFlow::Node sink, string rep) {
     InclusionList::getRep(rep, "snk") and
-    //rep =  chooseBestRep(sink)
-    rep = candidateRep(sink, _, true)
+    rep = ReprHelpers::chooseBestRep(sink, true)
+    // rep = candidateRep(sink, _, true)
   }
   predicate includeListedSink(DataFlow::Node sink) {
     includeListedSink(sink, _)
   }
 
-/**
- * Choose one repr for a sink
- * Prioritizes the use of member instead of receivers
- */
-string chooseBestRep(DataFlow::Node sink) {
-  result = max(string rep, int depth, int score | 
-    rep = candidateRep(sink, depth, true) 
-    and score = count (  rep.indexOf("member"))*4
-    +  count (  rep.indexOf("return"))*2
-    +  count (  rep.indexOf("parameter"))*3
-    // Penalizes the receivers againts members
-    -  count (  rep.indexOf("parameter -1"))*4
-    | rep order by score, depth, rep) 
-}
-
-string maximalRep2(DataFlow::Node sink) {
-  // result = max(string rep, int depth | rep = candidateRep(sink.getNode(), depth, true) | rep order by depth, rep)
-   result =  max(string rep | 
-    exists( int maxDepth |  maxDepth > 0
-        and rep  =  candidateRep(sink, maxDepth, true) 
-        and maxDepth = max( int d | exists(string rep2  |   
-                      candidateRep(sink, d, true) = rep2 )
-                  ) 
-        )
-    )
-}
-
-string maximalRep(DataFlow::Node sink) {
-  result = max(string rep, int depth | 
-    rep = candidateRep(sink, depth, true) | rep order by depth, rep)
-}
 
 
 /**
@@ -157,9 +185,10 @@ class BoostedConfigFilterWorse extends TaintTracking::Configuration {
   }
 
   override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
-    (ExpandedConfiguration::isCandidateSink(sink)
-    and not excludeListedSink(sink)
-    )
+    // (ExpandedConfiguration::isCandidateSink(sink)
+    // and not excludeListedSink(sink)
+    // )
+    includeListedSink(sink)
     or 
     sink.(NosqlInjectionWorse::Sink).getAFlowLabel() = label
   }

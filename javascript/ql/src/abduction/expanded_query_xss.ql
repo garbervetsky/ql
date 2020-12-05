@@ -11,7 +11,7 @@ import config_expanded_xss
 import DataFlow::PathGraph
 import tsm.evaluation.DomBasedXssWorse
 import semmle.javascript.security.dataflow.DomBasedXss
-
+import BoostedConfigFilter::ReprHelpers
 
 query predicate compareAlertsCount(int vWorse, int v0, int vExpanded) {
   vExpanded = count(DataFlow::PathNode source, DataFlow::PathNode sink |
@@ -141,22 +141,9 @@ predicate sinksToBlame(DataFlow::PathNode sink, int repetitions) {
 
 query predicate sinksToBlameFiltered(DataFlow::PathNode sink, int repetitions, string rep) {
   sinksToBlame(sink, repetitions)   
-  and rep = chooseBestRep(sink.getNode())
+  and rep = chooseBestRep(sink.getNode(), true)
 }
 
-/**
- * Choose one repr for a sink
- * Prioritizes the use of member instead of receivers
- */
-string chooseBestRep(DataFlow::Node sink) {
-  result = max(string rep, int depth, int score | 
-    rep = candidateRep(sink, depth, true) 
-    and score = count (  rep.indexOf("member"))*4
-    +  count (  rep.indexOf("return"))*2
-    +  count (  rep.indexOf("parameter"))*3
-    -  count (  rep.indexOf("parameter -1"))*4
-    | rep order by score, depth, rep)
-}
 
 predicate sinksToBlameWorse(DataFlow::PathNode sink, int repetitions) {
   repetitions = count(
@@ -175,7 +162,7 @@ predicate sinksToBlameWorse(DataFlow::PathNode sink, int repetitions) {
 }
 query predicate sinksToBlameFilteredWorse(DataFlow::PathNode sink, int repetitions, string rep) {
   sinksToBlameWorse(sink, repetitions)   
-  and rep = chooseBestRep(sink.getNode())
+  and rep = chooseBestRep(sink.getNode(), true)
 }
 
 
