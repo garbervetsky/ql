@@ -95,7 +95,7 @@ class Node extends TIRDataFlowNode {
    * Gets the uninitialized local variable corresponding to this node, if
    * any.
    */
-  LocalVariable asUninitialized() { none() }
+  deprecated LocalVariable asUninitialized() { none() }
 
   /**
    * Gets an upper bound on the type of this node.
@@ -266,10 +266,8 @@ class ParameterIndirectionNode extends ParameterNode {
 
   override predicate isParameterOf(Function f, int pos) {
     exists(int index |
-      f.getParameter(index) = instr.getParameter()
-      or
-      index = -1 and
-      instr.getIRVariable().(IRThisVariable).getEnclosingFunction() = f
+      instr.getEnclosingFunction() = f and
+      instr.hasIndex(index)
     |
       pos = getArgumentPosOfSideEffect(index)
     )
@@ -396,16 +394,16 @@ private FieldAddressInstruction getFieldInstruction(Instruction instr) {
 
 /**
  * The target of a `fieldStoreStepAfterArraySuppression` store step, which is used to convert
- * an `ArrayContent` to a `FieldContent` when the `BufferMayWriteSideEffect` instruction stores
+ * an `ArrayContent` to a `FieldContent` when the `WriteSideEffect` instruction stores
  * into a field. See the QLDoc for `suppressArrayRead` for an example of where such a conversion
  * is inserted.
  */
-private class BufferMayWriteSideEffectFieldStoreQualifierNode extends PartialDefinitionNode {
+private class WriteSideEffectFieldStoreQualifierNode extends PartialDefinitionNode {
   override ChiInstruction instr;
-  BufferMayWriteSideEffectInstruction write;
+  WriteSideEffectInstruction write;
   FieldAddressInstruction field;
 
-  BufferMayWriteSideEffectFieldStoreQualifierNode() {
+  WriteSideEffectFieldStoreQualifierNode() {
     not instr.isResultConflated() and
     instr.getPartial() = write and
     field = getFieldInstruction(write.getDestinationAddress())
@@ -476,16 +474,8 @@ class DefinitionByReferenceNode extends InstructionNode {
       instr
           .getPrimaryInstruction()
           .(CallInstruction)
-          .getPositionalArgument(instr.getIndex())
+          .getArgument(instr.getIndex())
           .getUnconvertedResultExpression()
-    or
-    result =
-      instr
-          .getPrimaryInstruction()
-          .(CallInstruction)
-          .getThisArgument()
-          .getUnconvertedResultExpression() and
-    instr.getIndex() = -1
   }
 
   /** Gets the parameter through which this value is assigned. */
@@ -654,6 +644,19 @@ private predicate simpleOperandLocalFlowStep(Instruction iFrom, Operand opTo) {
     init.getParameter().getType().getUnspecifiedType().(DerivedType).getBaseType() =
       opTo.getType().getUnspecifiedType()
   )
+  or
+  // Flow from stores to structs with a single field to a load of that field.
+  exists(LoadInstruction load |
+    load.getSourceValueOperand() = opTo and
+    opTo.getAnyDef() = iFrom and
+    isSingleFieldClass(iFrom.getResultType(), opTo)
+  )
+}
+
+private predicate simpleInstructionLocalFlowStep(Operand opFrom, Instruction iTo) {
+  iTo.(CopyInstruction).getSourceValueOperand() = opFrom
+  or
+  iTo.(PhiInstruction).getAnInputOperand() = opFrom
   or
   // Flow from stores to structs with a single field to a load of that field.
   exists(LoadInstruction load |

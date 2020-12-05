@@ -16,6 +16,7 @@ import semmle.code.java.frameworks.android.XmlParsing
 import semmle.code.java.frameworks.android.WebView
 import semmle.code.java.frameworks.JaxWS
 import semmle.code.java.frameworks.javase.WebSocket
+import semmle.code.java.frameworks.android.Android
 import semmle.code.java.frameworks.android.Intent
 import semmle.code.java.frameworks.spring.SpringWeb
 import semmle.code.java.frameworks.spring.SpringController
@@ -111,8 +112,7 @@ private class SpringMultipartRequestSource extends RemoteFlowSource {
     exists(MethodAccess ma, Method m |
       ma = this.asExpr() and
       m = ma.getMethod() and
-      m
-          .getDeclaringType()
+      m.getDeclaringType()
           .getASourceSupertype*()
           .hasQualifiedName("org.springframework.web.multipart", "MultipartRequest") and
       m.getName().matches("get%")
@@ -127,8 +127,7 @@ private class SpringMultipartFileSource extends RemoteFlowSource {
     exists(MethodAccess ma, Method m |
       ma = this.asExpr() and
       m = ma.getMethod() and
-      m
-          .getDeclaringType()
+      m.getDeclaringType()
           .getASourceSupertype*()
           .hasQualifiedName("org.springframework.web.multipart", "MultipartFile") and
       m.getName().matches("get%")
@@ -183,15 +182,29 @@ private class WebSocketMessageParameterSource extends RemoteFlowSource {
   override string getSourceType() { result = "Websocket onText parameter" }
 }
 
+private class BeanValidationSource extends RemoteFlowSource {
+  BeanValidationSource() {
+    exists(Method m, Parameter v |
+      this.asParameter() = v and
+      m.getParameter(0) = v and
+      m.getDeclaringType()
+          .getASourceSupertype+()
+          .hasQualifiedName("javax.validation", "ConstraintValidator") and
+      m.hasName("isValid") and
+      m.fromSource()
+    )
+  }
+
+  override string getSourceType() { result = "BeanValidation source" }
+}
+
 /** Class for `tainted` user input. */
 abstract class UserInput extends DataFlow::Node { }
 
 /**
- * DEPRECATED: Use `RemoteFlowSource` instead.
- *
  * Input that may be controlled by a remote user.
  */
-deprecated class RemoteUserInput extends UserInput {
+private class RemoteUserInput extends UserInput {
   RemoteUserInput() { this instanceof RemoteFlowSource }
 }
 
@@ -219,8 +232,7 @@ class EnvInput extends LocalUserInput {
     exists(Field f | this.asExpr() = f.getAnAccess() | f instanceof SystemIn)
     or
     // Access to files.
-    this
-        .asExpr()
+    this.asExpr()
         .(ConstructorCall)
         .getConstructedType()
         .hasQualifiedName("java.io", "FileInputStream")
@@ -306,15 +318,26 @@ class ReverseDNSMethod extends Method {
 
 /** Android `Intent` that may have come from a hostile application. */
 class AndroidIntentInput extends DataFlow::Node {
+  Type receiverType;
+
   AndroidIntentInput() {
     exists(MethodAccess ma, AndroidGetIntentMethod m |
       ma.getMethod().overrides*(m) and
-      this.asExpr() = ma
+      this.asExpr() = ma and
+      receiverType = ma.getReceiverType()
     )
     or
     exists(Method m, AndroidReceiveIntentMethod rI |
       m.overrides*(rI) and
-      this.asParameter() = m.getParameter(1)
+      this.asParameter() = m.getParameter(1) and
+      receiverType = m.getDeclaringType()
     )
   }
+}
+
+/** Exported Android `Intent` that may have come from a hostile application. */
+class ExportedAndroidIntentInput extends RemoteFlowSource, AndroidIntentInput {
+  ExportedAndroidIntentInput() { receiverType.(ExportableAndroidComponent).isExported() }
+
+  override string getSourceType() { result = "Exported Android intent source" }
 }
