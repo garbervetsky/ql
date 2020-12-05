@@ -1,4 +1,30 @@
 import javascript
+import tsm.ApiGraphs
+
+private predicate callFromImport(string library, DataFlow::InvokeNode invk) {
+  invk = API::moduleImport(library).getASuccessor*().getAnInvocation()
+}
+
+private predicate isCallBackArgument(DataFlow::Node callBack, DataFlow::InvokeNode invk) {
+callBack = invk.getABoundCallbackParameter(_,_)
+}
+
+predicate isCandidateSource(DataFlow::Node source, string library) {
+  exists (DataFlow::InvokeNode call, DataFlow::Node callback  |
+    isRelevant(call) and callFromImport(library, call) and
+    isCallBackArgument(callback, call) and source = callback
+  )
+}
+
+predicate isCandidateSink(DataFlow::Node sink, string library) {
+  exists (DataFlow::InvokeNode call, DataFlow::Node arg  |
+  isRelevant(call) and callFromImport(library, call) and
+  (arg = call.getAnArgument() or arg = call.(DataFlow::MethodCallNode).getReceiver())
+  and not (isCallBackArgument(arg, call)) and
+  sink = arg  
+  )
+}
+
 
 /**
  * Holds if `nd` is relevant to program semantics.
@@ -28,7 +54,7 @@ private DataFlow::Node getAnExport(string pkgName) {
       apw.writes(m.(AnalyzedModule).getModuleObject(), "exports", result)
     )
     or
-    //m.(ES2015Module).getAnExportedValue("default") = result 
+    // m.(ES2015Module).getAnExportedValue("default") = result 
     m.(ES2015Module).exports("default", result.(DataFlow::ValueNode).getAstNode())
   )
 }
@@ -125,8 +151,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
         nd = base.(DataFlow::InvokeNode).getArgument(i) and
         asRhs = true
         or 
-        i = -1 and 
-        nd = base.(DataFlow::CallNode).getReceiver() and
+        i = -1 and nd = base.(DataFlow::MethodCallNode).getReceiver() and
         asRhs = true
       |
         p = i.toString()
@@ -195,4 +220,24 @@ string genericMemberPattern() {
   )
 }
 
+string chooseBestRep(DataFlow::Node sink, boolean asRhs) {
+  result = max(string rep, int depth, int score | 
+    rep = candidateRep(sink, depth, asRhs) and
+      exists(int cm, int cr, int cp, int cpr, int croot, int plus |
+        cm = count (rep.indexOf("member")) and
+        cr = count (rep.indexOf("return")) and
+        cp = count (rep.indexOf("parameter")) and 
+        cpr = count (rep.indexOf("parameter -1")) and
+        croot = count (rep.indexOf("(root ")) and
+        (
+          (cm = 1 and cr = 1 and cp = 1 and croot = 1 and cpr = 0 and plus = 200)
+          or
+          (cm = 1 and cr = 1 and cp = 1 and cpr = 0 and plus = 80)
+           or 
+           plus = 0) and
+        // Penalizes the receivers againts members
+        score = cm*4 +  cr*3 +  cp*5  -  cpr *8 + plus
+      )
+    | rep order by score, depth, rep) 
+}
 

@@ -1,6 +1,10 @@
 private import javascript
 private import NodeRepresentation
 
+private float minScore_snk() { result = 0.01}
+private float minScore_src() { result = 1.1}
+// Score>1 to ignore sanitizers
+private float minScore_san() { result = 1.1}
 
 module TSM {
   abstract class Representations extends string {
@@ -47,12 +51,19 @@ module TSM {
 
   /** A candidate source, i.e. a known source or a predicted source. */
   class CandidateSource extends DataFlow::Node {
-    CandidateSource() { this instanceof KnownSource or (this instanceof PredictedSource and this.(PredictedSource).getScore() >= 0.7) }
+    CandidateSource() { 
+      this instanceof KnownSource 
+      or (this instanceof PredictedSource 
+        and this.(PredictedSource).getScore() >= minScore_src()) 
+      }
   }
 
   /** A candidate sink, i.e. a known sink or a predicted sink. */
   class CandidateSink extends DataFlow::Node {
-    CandidateSink() { this instanceof KnownSink or (this instanceof PredictedSink and this.(PredictedSink).getScore() >= 0.25) }
+    CandidateSink() { 
+      this instanceof KnownSink 
+      or (this instanceof PredictedSink and this.(PredictedSink).getScore() >= minScore_snk()) 
+    }
   }
 
   /** Get the TSM representation for the node, if one exists. */
