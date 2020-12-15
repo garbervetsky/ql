@@ -26,31 +26,31 @@ module ReprHelpers {
     | rep order by score, depth, rep) 
   }
 
-  /**
- * Select one 'candidate'repr. 
- * Prioritizes the canonical repr on the form:
- * (parameter x (return (member F (root package))))
- */
-string chooseBestRep(DataFlow::Node sink, boolean asRhs) {
-  result = max(string rep, int depth, int score | 
-    rep = candidateRep(sink, depth, asRhs) and
-      exists(int cm, int cr, int cp, int cpr, int croot, int plus |
-        cm = count (rep.indexOf("member")) and
-        cr = count (rep.indexOf("return")) and
-        cp = count (rep.indexOf("parameter")) and 
-        cpr = count (rep.indexOf("parameter -1")) and
-        croot = count (rep.indexOf("(root ")) and
-        (
-          (cm = 1 and cr = 1 and cp = 1 and croot = 1 and cpr = 0 and plus = 200)
-          or
-          (cm = 1 and cr = 1 and cp = 1 and cpr = 0 and plus = 80)
-           or 
-           plus = 0) and
-        // Penalizes the receivers againts members
-        score = cm*4 +  cr*3 +  cp*5  -  cpr *8 + plus
-      )
-    | rep order by score, depth, rep) 
-}
+//   /**
+//  * Select one 'candidate'repr. 
+//  * Prioritizes the canonical repr on the form:
+//  * (parameter x (return (member F (root package))))
+//  */
+// string chooseBestRep(DataFlow::Node sink, boolean asRhs) {
+//   result = max(string rep, int depth, int score | 
+//     rep = candidateRep(sink, depth, asRhs) and
+//       exists(int cm, int cr, int cp, int cpr, int croot, int plus |
+//         cm = count (rep.indexOf("member")) and
+//         cr = count (rep.indexOf("return")) and
+//         cp = count (rep.indexOf("parameter")) and 
+//         cpr = count (rep.indexOf("parameter -1")) and
+//         croot = count (rep.indexOf("(root ")) and
+//         (
+//           (cm = 1 and cr = 1 and cp = 1 and croot = 1 and cpr = 0 and plus = 200)
+//           or
+//           (cm = 1 and cr = 1 and cp = 1 and cpr = 0 and plus = 80)
+//            or 
+//            plus = 0) and
+//         // Penalizes the receivers againts members
+//         score = cm*4 +  cr*3 +  cp*5  -  cpr *8 + plus
+//       )
+//     | rep order by score, depth, rep) 
+// }
 
   string maximalRep2(DataFlow::Node sink) {
     // result = max(string rep, int depth | rep = candidateRep(sink.getNode(), depth, true) | rep order by depth, rep)
@@ -105,13 +105,13 @@ module BoostedConfigFilter {
 
   predicate excludeListedSink(DataFlow::Node sink, string rep) {
     ExcludeList::getRep(rep, "snk") and
-    rep =  ReprHelpers::chooseBestRep(sink, true)
+    rep =  chooseBestRep(sink, true)
     // rep = candidateRep(sink, _, true)
   }
 
   predicate includeListedSink(DataFlow::Node sink, string rep) {
     InclusionList::getRep(rep, "snk") and
-    rep = ReprHelpers::chooseBestRep(sink, true)
+    rep = chooseBestRep(sink, true)
     // rep = candidateRep(sink, _, true)
   }
   predicate includeListedSink(DataFlow::Node sink) {

@@ -167,7 +167,7 @@ query predicate sinksToBlameFilteredWorse(DataFlow::PathNode sink, int repetitio
 
 predicate sinksToBlameFilteredWorse(DataFlow::PathNode sink, int repetitions, string rep, string crep, string library) {
   sinksToBlameFilteredWorse(sink, repetitions, rep)   
-  and ExpandedConfiguration::isCandidateSink(sink.getNode(), library) 
+  and isCandidateSink(sink.getNode(), library) 
   and crep = getconcatrep(sink.getNode(), true)
 }
 
