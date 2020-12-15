@@ -183,7 +183,7 @@ def processVsReprSinks(projectFileName, outputFile):
             pos = pos - 1
 
         sink = columns[pos]
-        rep = columns[pos+1]+' lib:'+library
+        rep = columns[pos+1] +' lib:'+library
         
         # sink= line.split(',')[0]
         # rep = line.split(',')[1]
