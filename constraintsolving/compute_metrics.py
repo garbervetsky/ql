@@ -121,6 +121,7 @@ def printmetrics(trainingsize, config: SolverConfig, ctx):
 
             #print("Repr set size: ", len(reprs))
         repConstraints = []    
+        reprToWrite = None
         for repr in reprs:
             if repr.find(":n")>=0:
                 repid=repr.split(":")[-1].strip()
