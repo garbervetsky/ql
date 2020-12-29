@@ -17,8 +17,22 @@ private string targetLibrary() {
   // )
 }
 
+class SqlSourceCandidate extends PropagationGraph::SourceCandidate {
+  SqlSourceCandidate() { none() }
+}
+
+// No adding sinks to the propagation graph
+class SqlSinkCandidate extends PropagationGraph::SinkCandidate {
+  SqlSinkCandidate() { none() }
+}
+
+
 predicate isSourceWorse(DataFlow::Node source) {
   source instanceof SqlInjectionWorse::Source
+}
+
+predicate isSinkWorse(DataFlow::Node sink) {
+  sink instanceof SqlInjectionWorse::Sink
 }
 
 
@@ -33,23 +47,7 @@ predicate triple(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk) {
   PropagationGraph::isSinkCandidate(_, snk)
 }
 
-query predicate pairSanSnk(string ssan, string ssnk){
-  exists(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk |
-      isSourceWorse(src) and
-      san = PropagationGraph::reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
-      src.getEnclosingExpr() != san.getEnclosingExpr() and
-      snk = PropagationGraph::reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
-      // We keep only sinks that are candidates
-      // (parameters of library functions)
-      isCandidateSink(snk, targetLibrary()) and
-      PropagationGraph::isSinkCandidate(_, snk) and
-      ssan = PropagationGraph::getconcatrep(san, false) and 
-      ssnk = PropagationGraph::getconcatrep(snk, true)    
-      )
-}
-
-
-query predicate pairSrcSan(string ssrc, string ssan){
+query predicate pairSanSnk(string ssan, string ssnk) {
   exists(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk |
     isSourceWorse(src) and
     san = PropagationGraph::reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
@@ -57,12 +55,29 @@ query predicate pairSrcSan(string ssrc, string ssan){
     snk = PropagationGraph::reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
     // We keep only sinks that are candidates
     // (parameters of library functions)
-    isCandidateSink(snk, targetLibrary()) and
+    (isCandidateSink(snk, targetLibrary())) and  //  or isSinkWorse(snk)) and
     PropagationGraph::isSinkCandidate(_, snk) and
-    ssan = PropagationGraph::getconcatrep(san, false) and 
-    ssrc = PropagationGraph::getconcatrep(src, false)  
-    )
-  }
+    exists(PropagationGraph::getconcatrep(src, false)) and
+    ssan = PropagationGraph::getconcatrep(san, false) and
+    ssnk = PropagationGraph::getconcatrep(snk, true)
+  )
+}
+
+query predicate pairSrcSan(string ssrc, string ssan) {
+  exists(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk |
+    isSourceWorse(src) and
+    san = PropagationGraph::reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
+    src.getEnclosingExpr() != san.getEnclosingExpr() and
+    snk = PropagationGraph::reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
+    // We keep only sinks that are candidates
+    // (parameters of library functions)
+    (isCandidateSink(snk, targetLibrary())) and  // or isSinkWorse(snk)) and
+    PropagationGraph::isSinkCandidate(_, snk) and
+    exists(PropagationGraph::getconcatrep(snk, true)) and  
+    ssan = PropagationGraph::getconcatrep(san, false) and
+    ssrc = PropagationGraph::getconcatrep(src, false)
+  )
+}
 
   predicate testSink(string ssnk, DataFlow::Node snk) {
     exists(DataFlow::Node src, DataFlow::Node san |
