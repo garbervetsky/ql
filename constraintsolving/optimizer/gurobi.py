@@ -127,7 +127,9 @@ class GenerateModelStep(OrchestrationStep):
                                                 config.use_all_sanitizers, ctx)
             except Exception as e:
                 self.logger.info("There was a problem reading events!")
-                traceback.self.logger.info_exc(file=sys.stdout)
+                stkTrace = traceback.extract_stack()
+                self.logger.info(stkTrace)
+                #traceback.self.logger.info_exc(file=sys.stdout)
                 pass
         # exit(1)
         # remove events with no min reps

@@ -16,7 +16,13 @@ def create_project_list(projectListFile):
         logging.info(f"Project name: {project}")
         projectPrefix =  os.path.join(project_dir, project.replace('\r', '').replace('\n', '').replace("/","_"))
         logging.info(f"Prefix: {projectPrefix}")
-        projectCandidate = glob.glob(projectPrefix+"_*", recursive=True)
+        ## To-do: improve. The project list could be a list of projec names or project folders
+        # I'd better to include a cmd line option  
+        if("/" in project):
+            projectCandidate = glob.glob(projectPrefix+"_*", recursive=True)
+        else:
+            projectCandidate = glob.glob(projectPrefix, recursive=True)
+            
         print(projectCandidate)
         if len(projectCandidate)>0:
             resultingProjects.append(projectCandidate[0])
@@ -117,13 +123,17 @@ if __name__ == '__main__':
                             projectList) 
 
         if parsed_arguments.command == "run":
-            if parsed_arguments.steps != "":
-                # This should be the new `--steps` argument. --single-step should be deprecated
-                steps_to_run = parsed_arguments.steps.split(",")
-                orchestrator.run_steps(steps_to_run)
-            elif parsed_arguments.single_step == all_steps:
-                orchestrator.run()
-            else:
-                orchestrator.run_step(parsed_arguments.single_step) 
+            try:
+                if parsed_arguments.steps != "":
+                    # This should be the new `--steps` argument. --single-step should be deprecated
+                    steps_to_run = parsed_arguments.steps.split(",")
+                    orchestrator.run_steps(steps_to_run)
+                elif parsed_arguments.single_step == all_steps:
+                    orchestrator.run()
+                else:
+                    orchestrator.run_step(parsed_arguments.single_step)
+            except Exception as inst:
+                logging.info(f"Error running  project: {project}, {inst}")
+
         elif parsed_arguments.command == "clean":
             orchestrator.clean()

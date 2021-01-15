@@ -14,7 +14,7 @@ class CodeQLWrapper:
         try:
             # TODO: Check that file exists, and it's codeql?
             self._code_ql_binary_path = global_config.codeql_executable
-            self._logs_directory = "logs/"
+            self._logs_directory = "/persistent2/logs/"
             self._logger = logging.getLogger(self.__class__.__name__)
         except KeyError:
             raise Exception(
@@ -34,6 +34,7 @@ class CodeQLWrapper:
             f"--database={project}",
             f"--output={output_file}",
             "--threads=-1",
+            "--timeout=3600",
             f"--search-path={global_config.search_path}"
         ]
         self._logger.info(
@@ -56,6 +57,8 @@ class CodeQLWrapper:
             f"--logdir={self._logs_directory}",
             f"--output={output_file}",
             f"--search-path={global_config.search_path}",
+            "--timeout=3600",
+            "--ram=64536",
             "--threads=-1"
         ]
         self._logger.info(
