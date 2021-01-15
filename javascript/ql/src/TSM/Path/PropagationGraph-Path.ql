@@ -48,6 +48,10 @@ predicate isSinkWorse(DataFlow::Node sink) {
   sink instanceof TaintedPathWorse::Sink
 }
 
+predicate isSanitizerWorse(DataFlow::Node sanitizer) {
+  sanitizer instanceof TaintedPathWorse::Sanitizer
+  or sanitizer instanceof TaintedPathWorse::BarrierGuardNode
+}
 
 // predicate reachableFromSourceCandidate(
 //   PropagationGraph::SourceCandidate src, PropagationGraph::Node nd
@@ -88,6 +92,7 @@ query predicate pairSanSnk(string ssan, string ssnk) {
   exists(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk |
     isSourceWorse(src) and
     san = PropagationGraph::reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
+    isSanitizerWorse(san) and
     src.getEnclosingExpr() != san.getEnclosingExpr() and
     snk = PropagationGraph::reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
     // We keep only sinks that are candidates
@@ -104,6 +109,7 @@ query predicate pairSrcSan(string ssrc, string ssan) {
   exists(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk |
     isSourceWorse(src) and
     san = PropagationGraph::reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
+    isSanitizerWorse(san) and
     src.getEnclosingExpr() != san.getEnclosingExpr() and
     snk = PropagationGraph::reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
     // We keep only sinks that are candidates
