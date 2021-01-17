@@ -403,9 +403,12 @@ class ConstraintBuilder:
         for san in san_snk_map.keys():
             # sanit_sink will contain for every pair of sanit -> sink, the possible
             # sources that complete the triplet.
+            # sources =  filter(lambda s: s in self.events, san_src_map[san])
             sources =  san_src_map[san]
             sanit_sink_list = list(map(lambda s: self.events[s], sources))
             for snk in san_snk_map[san]:
+                # if not san in self.events or not snk in self.events[snk]:
+                #     continue  
                 sanit_sink_tuple = (self.events[san], self.events[snk])
                 sanit_sink[sanit_sink_tuple] = sanit_sink_list
 
@@ -616,7 +619,7 @@ class ConstraintBuilder:
         keys=list(self.events.keys())
         dropped=0
         for k in keys:
-            reps = list(filter(lambda x: self.rep_count[x] >= self.min_rep_events, self.events[k].reps))
+            reps = list(filter(lambda x: x in self.rep_count and self.rep_count[x] >= self.min_rep_events, self.events[k].reps))
             if len(reps) == 0:
                 self.events.pop(k)
                 dropped+=1

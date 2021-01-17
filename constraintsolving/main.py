@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 import glob
-
+import traceback
 
 from orchestration.orchestrator import Orchestrator
 from orchestration import global_config
@@ -134,6 +134,8 @@ if __name__ == '__main__':
                     orchestrator.run_step(parsed_arguments.single_step)
             except Exception as inst:
                 logging.info(f"Error running  project: {project}, {inst}")
+                traceback.print_exc()
+
 
         elif parsed_arguments.command == "clean":
             orchestrator.clean()

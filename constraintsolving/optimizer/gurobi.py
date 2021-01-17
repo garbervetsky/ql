@@ -132,8 +132,10 @@ class GenerateModelStep(OrchestrationStep):
                 #traceback.self.logger.info_exc(file=sys.stdout)
                 pass
         # exit(1)
-        # remove events with no min reps
-        # constraint_builder.removeRareEvents()
+        # if we run multiple projects we allow some filtering
+        # if not self.orchestrator.run_single:
+        #     # remove events with no min reps
+        #     constraint_builder.removeRareEvents()
         # initiate all variables
         constraint_builder.createVariables(ctx)
 
