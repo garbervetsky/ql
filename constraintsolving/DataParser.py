@@ -23,6 +23,14 @@ def remapRepsToClusters(reps):
 
     pass
 
+def compute_rep_count(file_loc, rep_count=None):
+    print("Reading events from: ", file_loc)
+    df=pd.read_csv(file_loc)
+    for rep in list(df["repr"]):
+        reps = rep.strip().split("::")
+        for k in reps:
+            rep_count[k] = rep_count.get(k, 0) + 1
+
 
 def readEvents(file_loc, events=None, unique_reps=None, rep_count=None, ctx=dict()):
     print("Reading events from: ", file_loc)
@@ -32,8 +40,15 @@ def readEvents(file_loc, events=None, unique_reps=None, rep_count=None, ctx=dict
     if events is None:
         events=dict()
     cur_reps=set(list(df["repr"]))
+    # TODO: Diego Check 
+    for rep in list(df["repr"]):
+        reps= rep.strip().split("::")
+        for k in reps:
+            rep_count[k] = rep_count.get(k, 0) + 1
+
     new_reps=cur_reps.difference(set(events.keys()))
     print("New events: %d" % len(new_reps))
+    print("Size rep_count: %d" % len(rep_count.keys()))
     for rep in new_reps:
         event_obj = Event(rep, reps=rep.strip().split("::"))
         events[rep] = event_obj

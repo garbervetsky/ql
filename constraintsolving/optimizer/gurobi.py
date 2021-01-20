@@ -4,7 +4,7 @@ import shutil
 import traceback
 from glob import glob
 from generation.data import DataGenerator
-
+from DataParser import compute_rep_count
 import sys
 import time
 
@@ -17,6 +17,84 @@ from orchestration.steps import OrchestrationStep, Context,\
 from solver.config import SolverConfig
 from solver.get_constraints import ConstraintBuilder
 from solver.solve_gb import solve_constraints_combine_model, solve_constraints
+
+
+class CountRepsStep(OrchestrationStep):
+    def populate(self, ctx: Context) -> Context:
+        return ctx
+
+    def clean(self, ctx: Context):
+        pass
+
+    def should_use_existing_model_dirs(self, ctx):
+        """This step should use existing model_dirs in the following cases:
+        1. Just running optimize step, should use existing model dirs
+        2. When cleaning, delete the existing model dirs
+        3. If running multiple steps, but this step is not included, reuse existing model dirs
+        """
+        return \
+            (SINGLE_STEP_NAME in ctx) and ctx[SINGLE_STEP_NAME] == "optimize" or \
+            (COMMAND_NAME in ctx) and ctx[COMMAND_NAME] == "clean" or \
+            (STEP_NAMES in ctx) and not self.name() in ctx[STEP_NAMES]
+            
+
+
+    def run(self, ctx: Context) -> Context:
+        if self.orchestrator.hasExecuted:
+            return "EXITING...."
+            return ctx
+
+        # TODO: Implement --mode=combined model generation
+        # TODO: Extract this as an orchestrator config?
+        # TODO: Fix logging
+        results_dir = ctx[RESULTS_DIR_KEY]
+        working_dir = ctx[WORKING_DIR_KEY]
+        logs_dir = ctx[LOGS_DIR_KEY]
+
+        projects_folder = os.path.join(working_dir, "data")
+        projects_path = [ ps for p in self.orchestrator.project_list for ps in glob(os.path.join(projects_folder, p)) ]    
+        # projects_path = glob(os.path.join(projects_folder, self.orchestrator.project_name))
+
+        projects = [os.path.basename(k) for k in projects_path]
+        self.logger.info("Collected {0} projects".format(len(projects)))
+        self.logger.info("Counting reps")
+
+        name = self.orchestrator.project_name
+
+        for project_path in projects_path:
+            project = os.path.basename(project_path)
+            project_dir = os.path.dirname(project_path)
+            try:
+                self.logger.info("Analizing project: %s", project)
+
+                # hack -> refactor using populate
+                # if not self.orchestrator.run_single:
+                dataGenerator = DataGenerator(project_dir, project, 
+                                            self.orchestrator.data_generator.working_dir, 
+                                            self.orchestrator.data_generator.results_dir)
+                self.orchestrator.project_name = project
+    
+                (ctx[SOURCE_ENTITIES],
+                ctx[SINK_ENTITIES],
+                ctx[SANITIZER_ENTITIES],
+                ctx[SRC_SAN_TUPLES_ENTITIES],
+                ctx[SAN_SNK_TUPLES_ENTITIES],
+                ctx[REPR_MAP_ENTITIES]) = dataGenerator.get_entity_files(self.orchestrator.query_type)
+
+                compute_rep_count(ctx[REPR_MAP_ENTITIES], self.orchestrator.rep_counter)
+                print('rep_count %d' % len(self.orchestrator.rep_counter))
+            
+            except Exception as e:
+                self.logger.info("There was a problem reading events!")
+                stkTrace = traceback.extract_stack()
+                self.logger.info(stkTrace)
+                #traceback.self.logger.info_exc(file=sys.stdout)
+                pass
+        
+        return ctx
+
+    def name(self) -> str:
+        return "count_reps"
 
 
 class GenerateModelStep(OrchestrationStep):
@@ -133,9 +211,12 @@ class GenerateModelStep(OrchestrationStep):
                 pass
         # exit(1)
         # if we run multiple projects we allow some filtering
-        # if not self.orchestrator.run_single:
-        #     # remove events with no min reps
-        #     constraint_builder.removeRareEvents()
+        if not self.orchestrator.run_single:
+            # remove events with no min reps
+            constraint_builder.removeRareEvents()
+        else:
+            if len(self.orchestrator.rep_counter)>0:
+                constraint_builder.removeRareEvents(self.orchestrator.rep_counter)
         # initiate all variables
         constraint_builder.createVariables(ctx)
 

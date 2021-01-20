@@ -9,9 +9,14 @@ import pandas as pd
 
 
 def combine_scores(query, \
-                    project_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__)))):
+                    project_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+                    multiple=False):
     print(project_dir)
-    files=glob.glob(os.path.join(project_dir) + "/*/{0}-*/reprScores.txt".format(query))
+    if multiple:
+        files=glob.glob(os.path.join(project_dir) + "/multiple/{0}-*/reprScores.txt".format(query))
+    else:
+        files=glob.glob(os.path.join(project_dir) + "/*/{0}-*/reprScores.txt".format(query))
+        files = list(filter(lambda p: os.path.join(project_dir, "multiple") not in p, files))
     files.sort()
     #print(files)
     last_files = list()
@@ -91,9 +96,12 @@ logging.basicConfig(level=logging.INFO, format="[%(levelname)s\t%(asctime)s] %(n
 
 parser.add_argument("--project-dir", dest="project_dir", required=True, type=str,
                     help="Directory of the results score")
+
 parser.add_argument("--query-name", dest="query_name", required=True, type=str,
                     choices=["NosqlInjectionWorse", "SqlInjectionWorse", "DomBasedXssWorse","TaintedPathWorse"],
                     help="Name of the query to solve")
+
+parser.add_argument("--multiple", dest="multiple", action='store_true', help='Use the result of a run of one combined result')
 
 parsed_arguments = parser.parse_args()
 #project_dir = os.path.normpath(parsed_arguments.project_dir)
@@ -101,5 +109,6 @@ parsed_arguments = parser.parse_args()
 #query = os.environ["QUERY_NAME"]
 query_name = parsed_arguments.query_name
 working_dir = parsed_arguments.project_dir
+
 if __name__ == '__main__':
-    combine_scores(query_name, working_dir)
+    combine_scores(query_name, working_dir, parsed_arguments.multiple)

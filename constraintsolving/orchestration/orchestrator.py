@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 from generation.data import DataGenerator, GenerateEntitiesStep, GenerateScoresStep, GenerateTSMQueryStep
-from optimizer.gurobi import GenerateModelStep, OptimizeStep
+from optimizer.gurobi import GenerateModelStep, OptimizeStep, CountRepsStep
 
 from orchestration import global_config
 from orchestration.steps import Context,  RESULTS_DIR_KEY, WORKING_DIR_KEY, SINGLE_STEP_NAME, COMMAND_NAME, STEP_NAMES
@@ -29,6 +29,7 @@ class Orchestrator:
     step_templates = [
         GenerateEntitiesStep,
         GenerateModelStep,
+        CountRepsStep,
         OptimizeStep,
         #GenerateScoresStep,
         GenerateTSMQueryStep
@@ -36,6 +37,7 @@ class Orchestrator:
     possible_steps = [
         GenerateEntitiesStep,
         GenerateModelStep,
+        CountRepsStep,
         OptimizeStep,
         GenerateScoresStep,
         GenerateTSMQueryStep
@@ -47,7 +49,9 @@ class Orchestrator:
                 scores_file: str, 
                 no_flow: bool,
                 run_separate_on_multiple_projects: bool,
-                project_list: List[str]):
+                project_list: List[str], 
+                rep_counter = dict(),
+                hasExecuted: bool = False):
         self.query_type = query_type
         self.query_name = query_name
         self.kind = kind
@@ -65,6 +69,10 @@ class Orchestrator:
         else:
             self.scores_file = scores_file
             self.combinedScore = True
+        self.rep_counter = rep_counter
+        # Hack to execute only once a step 
+        self.hasExecuted = hasExecuted
+
         self.data_generator = DataGenerator(project_dir, project_name, working_dir, results_dir)
         self.logger = logging.getLogger(self.__class__.__name__)
         # Instantiate orchestration step templates

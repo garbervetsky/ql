@@ -403,39 +403,44 @@ class ConstraintBuilder:
         for san in san_snk_map.keys():
             # sanit_sink will contain for every pair of sanit -> sink, the possible
             # sources that complete the triplet.
-            # sources =  filter(lambda s: s in self.events, san_src_map[san])
             sources =  san_src_map[san]
-            sanit_sink_list = list(map(lambda s: self.events[s], sources))
+            # sources =  filter(lambda s: s in self.events, list(sources))
+            #sanit_sink_list = list(map(lambda s: self.events[s], sources))
+
             for snk in san_snk_map[san]:
-                # if not san in self.events or not snk in self.events[snk]:
-                #     continue  
-                sanit_sink_tuple = (self.events[san], self.events[snk])
-                sanit_sink[sanit_sink_tuple] = sanit_sink_list
+                if  san in self.events and  snk in self.events:
+                    sanit_sink_tuple = (self.events[san], self.events[snk])
+                    
+                    sanit_sink[sanit_sink_tuple] = list()
+                    for src in sources:
+                        if src in self.events:
+                            sanit_sink[sanit_sink_tuple].append(self.events[src])
 
-                for src in sources:
-                    # source_sink will contain for every pair of source -> sink, the possible
-                    # sanitizers that complete the triplet.
-                    #print(src, src in self.events)
-                    #print(snk, snk in self.events)
-                    source_sink_tuple = (self.events[src], self.events[snk])
-                    source_sink_list = []
-                    if source_sink_tuple in source_sink:
-                        source_sink_list = source_sink.get(source_sink_tuple)
-                    else:
-                        source_sink[source_sink_tuple] = source_sink_list
-                    source_sink_list.append(self.events[san])
+                    for src in sources:
+                        # source_sink will contain for every pair of source -> sink, the possible
+                        # sanitizers that complete the triplet.
+                        #print(src, src in self.events)
+                        #print(snk, snk in self.events)
+                        if  src in self.events and snk in self.events:
+                            source_sink_tuple = (self.events[src], self.events[snk])
+                            source_sink_list = []
+                            if source_sink_tuple in source_sink:
+                                source_sink_list = source_sink.get(source_sink_tuple)
+                            else:
+                                source_sink[source_sink_tuple] = source_sink_list
+                            source_sink_list.append(self.events[san])
 
 
-                    # source_sanit will contain for every pair of source -> sanit, the possible
-                    # sinks that complete the triplet.
-                    source_sanit_tuple = (self.events[src], self.events[san])
-                    source_sanit_list = []
-                    if source_sanit_tuple in source_sanit:
-                        source_sanit_list = source_sanit.get(source_sanit_tuple)
-                    else:
-                        source_sanit[source_sanit_tuple] = source_sanit_list
+                            # source_sanit will contain for every pair of source -> sanit, the possible
+                            # sinks that complete the triplet.
+                            source_sanit_tuple = (self.events[src], self.events[san])
+                            source_sanit_list = []
+                            if source_sanit_tuple in source_sanit:
+                                source_sanit_list = source_sanit.get(source_sanit_tuple)
+                            else:
+                                source_sanit[source_sanit_tuple] = source_sanit_list
 
-                    source_sanit_list.append(self.events[snk])
+                            source_sanit_list.append(self.events[snk])
 
         return source_sanit, source_sink, sanit_sink
 
@@ -454,43 +459,46 @@ class ConstraintBuilder:
                 newepsvar = "{0}{1}".format(self._eps, len(self.eps_vars))
                 self.eps_vars.append(newepsvar)
                 # Adding constraint as in Seldon-Sec 4.2-Fig 4.a
-                constraintsfile.write(Constraint.print("{0} + {1} - {2} - {3}".format(
-                                                                          self.getBackOffVar(san_snk_pair[0], self._san),
-                                                                          self.getBackOffVar(san_snk_pair[1], self._snk),
-                                                                          " + ".join(
-                                                                              [self.getBackOffVar(k, self._src)
-                                                                              for k in sanit_sink[san_snk_pair]]).replace(" + ", " - "),
-                                                                          newepsvar),
-                                                       "{0}".format(global_constant_C),
-                                                       Constraint.Constraint.LTE, format='norm'))
-                constraintsfile.write("\n")
+                if len(sanit_sink[san_snk_pair])>0:
+                    constraintsfile.write(Constraint.print("{0} + {1} - {2} - {3}".format(
+                                                                            self.getBackOffVar(san_snk_pair[0], self._san),
+                                                                            self.getBackOffVar(san_snk_pair[1], self._snk),
+                                                                            " + ".join(
+                                                                                [self.getBackOffVar(k, self._src)
+                                                                                for k in sanit_sink[san_snk_pair]]).replace(" + ", " - "),
+                                                                            newepsvar),
+                                                        "{0}".format(global_constant_C),
+                                                        Constraint.Constraint.LTE, format='norm'))
+                    constraintsfile.write("\n")
 
             for src_san_pair in source_sanit.keys():
                 newepsvar = "{0}{1}".format(self._eps, len(self.eps_vars))
                 self.eps_vars.append(newepsvar)
                 # Adding constraint as in Seldon-Sec 4.2-Fig 4.b
-                constraintsfile.write(Constraint.print(
-                    "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_san_pair[0], self._src), self.getBackOffVar(src_san_pair[1], self._san)
-                                                   , " + ".join([self.getBackOffVar(k, self._snk) for k in source_sanit[src_san_pair]]).replace(" + ", " - "),
-                                                   newepsvar
-                                                   ),
-                    "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
+                if len(source_sanit[src_san_pair])>0:
+                    constraintsfile.write(Constraint.print(
+                        "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_san_pair[0], self._src), self.getBackOffVar(src_san_pair[1], self._san)
+                                                    , " + ".join([self.getBackOffVar(k, self._snk) for k in source_sanit[src_san_pair]]).replace(" + ", " - "),
+                                                    newepsvar
+                                                    ),
+                        "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
 
-                constraintsfile.write("\n")
+                    constraintsfile.write("\n")
 
             for src_snk_pair in source_sink.keys():
                 newepsvar = "{0}{1}".format(self._eps, len(self.eps_vars))
                 self.eps_vars.append(newepsvar)
 
                 # Adding constraint as in Seldon-Sec 4.2-Fig 4.c
-                constraintsfile.write(Constraint.print(
-                    "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_snk_pair[0], self._src),
-                                                   self.getBackOffVar(src_snk_pair[1], self._snk),
-                                                   " + ".join([self.getBackOffVar(k, self._san) for k in source_sink[src_snk_pair]]).replace(" + ", " - "),
-                                                   newepsvar
-                                                   ),
-                    "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
-                constraintsfile.write("\n")
+                if len(source_sink[src_snk_pair])>0:
+                    constraintsfile.write(Constraint.print(
+                        "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_snk_pair[0], self._src),
+                                                    self.getBackOffVar(src_snk_pair[1], self._snk),
+                                                    " + ".join([self.getBackOffVar(k, self._san) for k in source_sink[src_snk_pair]]).replace(" + ", " - "),
+                                                    newepsvar
+                                                    ),
+                        "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
+                    constraintsfile.write("\n")
 
     # @deprecated("use compute_source_sanit_sink_fromPairs")
     def generate_flow_constraints(self, projectdir, global_constant_C, query=None):
@@ -568,16 +576,17 @@ class ConstraintBuilder:
                 #                                        Constraint.Constraint.LTE))
 
                 # Adding constraint as in Seldon-Sec 4.2-Fig 4.a
-                constraintsfile.write(Constraint.print("{0} + {1} - {2} - {3}".format(
-                                                                          self.getBackOffVar(san_snk_pair[0], self._san),
-                                                                          self.getBackOffVar(san_snk_pair[1], self._snk),
-                                                                          " + ".join(
-                                                                              [self.getBackOffVar(k, self._src)
-                                                                              for k in sanit_sink[san_snk_pair]]).replace(" + ", " - "),
-                                                                          newepsvar),
-                                                       "{0}".format(global_constant_C),
-                                                       Constraint.Constraint.LTE, format='norm'))
-                constraintsfile.write("\n")
+                if len(sanit_sink[san_snk_pair])>0:
+                    constraintsfile.write(Constraint.print("{0} + {1} - {2} - {3}".format(
+                                                                            self.getBackOffVar(san_snk_pair[0], self._san),
+                                                                            self.getBackOffVar(san_snk_pair[1], self._snk),
+                                                                            " + ".join(
+                                                                                [self.getBackOffVar(k, self._src)
+                                                                                for k in sanit_sink[san_snk_pair]]).replace(" + ", " - "),
+                                                                            newepsvar),
+                                                        "{0}".format(global_constant_C),
+                                                        Constraint.Constraint.LTE, format='norm'))
+                    constraintsfile.write("\n")
 
             for src_san_pair in source_sanit.keys():
                 newepsvar = "{0}{1}".format(self._eps, len(self.eps_vars))
@@ -588,14 +597,15 @@ class ConstraintBuilder:
                 #                              global_constant_C, newepsvar), Constraint.Constraint.LTE))
 
                 # Adding constraint as in Seldon-Sec 4.2-Fig 4.b
-                constraintsfile.write(Constraint.print(
-                    "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_san_pair[0], self._src), self.getBackOffVar(src_san_pair[1], self._san)
-                                                   , " + ".join([self.getBackOffVar(k, self._snk) for k in source_sanit[src_san_pair]]).replace(" + ", " - "),
-                                                   newepsvar
-                                                   ),
-                    "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
+                if len(source_sanit[src_san_pair]):
+                    constraintsfile.write(Constraint.print(
+                        "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_san_pair[0], self._src), self.getBackOffVar(src_san_pair[1], self._san)
+                                                    , " + ".join([self.getBackOffVar(k, self._snk) for k in source_sanit[src_san_pair]]).replace(" + ", " - "),
+                                                    newepsvar
+                                                    ),
+                        "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
 
-                constraintsfile.write("\n")
+                    constraintsfile.write("\n")
 
             for src_snk_pair in source_sink.keys():
                 newepsvar = "{0}{1}".format(self._eps, len(self.eps_vars))
@@ -606,20 +616,23 @@ class ConstraintBuilder:
                 #                              global_constant_C, newepsvar), Constraint.Constraint.LTE))
 
                 # Adding constraint as in Seldon-Sec 4.2-Fig 4.c
-                constraintsfile.write(Constraint.print(
-                    "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_snk_pair[0], self._src),
-                                                   self.getBackOffVar(src_snk_pair[1], self._snk),
-                                                   " + ".join([self.getBackOffVar(k, self._san) for k in source_sink[src_snk_pair]]).replace(" + ", " - "),
-                                                   newepsvar
-                                                   ),
-                    "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
-                constraintsfile.write("\n")
+                if len(source_sink[src_snk_pair])>0:
+                    constraintsfile.write(Constraint.print(
+                        "{0} + {1} - {2} - {3}".format(self.getBackOffVar(src_snk_pair[0], self._src),
+                                                    self.getBackOffVar(src_snk_pair[1], self._snk),
+                                                    " + ".join([self.getBackOffVar(k, self._san) for k in source_sink[src_snk_pair]]).replace(" + ", " - "),
+                                                    newepsvar
+                                                    ),
+                        "{0}".format(global_constant_C), Constraint.Constraint.LTE, format='norm'))
+                    constraintsfile.write("\n")
 
-    def removeRareEvents(self):
+    def removeRareEvents(self, rep_counter = None):
+        if rep_counter is None:
+                rep_counter = self.rep_count         
         keys=list(self.events.keys())
         dropped=0
         for k in keys:
-            reps = list(filter(lambda x: x in self.rep_count and self.rep_count[x] >= self.min_rep_events, self.events[k].reps))
+            reps = list(filter(lambda x: x in rep_counter and rep_counter[x] >= self.min_rep_events, self.events[k].reps))
             if len(reps) == 0:
                 self.events.pop(k)
                 dropped+=1
@@ -628,6 +641,7 @@ class ConstraintBuilder:
 
     def writeObjective(self, ctx):
         objective_path = os.path.join(self.outputdir, "objective.txt")
+        print("Objective File: %s" % objective_path)
         with open("{0}/objective.txt".format(self.outputdir), "w") as objectivefile:
             obj = " + ".join(["{0} ".format(self.lambda_const) + k for k in self.variables.keys()])
             if len(self.eps_vars)>0:

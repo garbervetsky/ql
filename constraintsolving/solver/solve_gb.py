@@ -11,6 +11,8 @@ def solve_constraints_combine_model(config: SolverConfig, ctx):
     modelfile_path = os.path.join(ctx[MODELS_DIR_KEY], f"gurobi_model_{config.known_samples_ratio}_{1}.lp")
     # write minimization objective
     print("Writing minimization objective")
+    print("Model file: %s" % modelfile_path)
+    print("Constraint foler: %s" % constraintsdir)
     with open(modelfile_path, "w") as modelfile:
         modelfile.write("Minimize\n")
         modelfile.write(open(os.path.join(constraintsdir, "objective.txt")).read())

@@ -105,10 +105,16 @@ else:
 if parsed_arguments.multiple:
     run_separate_on_multiple_projects = False
 
+# map used to count ocurrencies of events and do filtering
+rep_counter = dict()
+
+
 if __name__ == '__main__':
     all_projects = projectList
     if parsed_arguments.multiple:
         all_projects = [projectList[0]]
+
+    hasExecuted = False
 
     for project in all_projects:       
         logging.info(f"Running orchestrator-{parsed_arguments.command} on project: {project}")
@@ -120,7 +126,9 @@ if __name__ == '__main__':
                             working_dir, results_dir,
                             scores_file, no_flow,
                             run_separate_on_multiple_projects,
-                            projectList) 
+                            projectList, 
+                            rep_counter, 
+                            hasExecuted) 
 
         if parsed_arguments.command == "run":
             try:
@@ -132,6 +140,7 @@ if __name__ == '__main__':
                     orchestrator.run()
                 else:
                     orchestrator.run_step(parsed_arguments.single_step)
+                hasExecuted = True
             except Exception as inst:
                 logging.info(f"Error running  project: {project}, {inst}")
                 traceback.print_exc()
