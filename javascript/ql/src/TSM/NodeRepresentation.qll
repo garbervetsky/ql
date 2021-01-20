@@ -1,5 +1,8 @@
+/**
+ * An implementation of access paths for representing events in propogation graphs.
+ */
+
 import javascript
-import semmle.javascript.ApiGraphs
 
 /**
  * Holds if `nd` is relevant to program semantics.
@@ -20,7 +23,7 @@ predicate isRelevant(DataFlow::Node nd) {
  * are filtered out above, so increasing the bound beyond a certain threshold may
  * not actually yield new candidates.
  */
-private int maxdepth() { result = 4 }
+private int maxdepth() { result = 5 }
 
 /** Gets a node that the main module of package `pkgName` exports. */
 private DataFlow::Node getAnExport(string pkgName) {
@@ -71,7 +74,14 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
   // compound representations
   exists(DataFlow::SourceNode base, string step, string baserep |
     (
-      baserep = candidateRep(base, depth - 1, _) and
+      (
+        baserep = candidateRep(base, depth - 1, false)
+        or
+        exists(DataFlow::Node rhs |
+          baserep = candidateRep(rhs, depth - 1, true) and
+          base = rhs.getALocalSource()
+        )
+      ) and
       // bound maximum depth of candidate representation
       depth <= maxdepth()
       or
@@ -168,182 +178,5 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
   exists(DataFlow::SourceNode base |
     base.flowsToExpr(nd.asExpr().(AwaitExpr).getOperand()) and
     result = candidateRep(base, depth, asRhs)
-  )
-}
-
-/** 
- * For testing only  
- */
-string candidateRepAlternative(DataFlow::Node nd, int depth, boolean asRhs) {
-  // result = kindOfNode(nd) +":"+ structuralCandidateRep(nd, depth, asRhs)
-  result = oldCandidateRep(nd, depth, asRhs)
-}
-
-/**
- * Require that local dataflow contains a property write to `node`.
- *
- * For example, this predicate would be true for a node corresponding to
- * `{ password : req.body.password }`, but false for a node corresponding to just
- * `req.body.password`.
- *
- * This is appropriate for NoSQL injection as we are looking for a query object built up from
- * user-controlled data.  Rarely is the query object itself user-controlled data.
- */
-predicate containsAPropertyThatIsWrittenTo(DataFlow::Node node) {
-  exists(DataFlow::PropWrite pw, DataFlow::Node base |
-    (
-      base = pw.getBase() or
-      base = pw.getBase().getImmediatePredecessor()
-    ) and
-    DataFlow::localFlowStep*(base, node)
-  )
-}
-
-string kindOfNode(DataFlow::Node nd)
-{
-  containsAPropertyThatIsWrittenTo(nd) 
-  and result = "pw"
-  or
-  exists(nd.(DataFlow::SourceNode).getAPropertyRead())
-  and result = "pr"        
-  or
-  exists(nd.(DataFlow::SourceNode).getACall())
-  and result = "call"        
-  or 
-  result = "ot"
-} 
-
-
-string oldCandidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
-  // static invoke in the same file
-  (
-    isRelevant(nd) and 
-    nd instanceof DataFlow::CallNode and
-    nd.(DataFlow::CallNode).getACallee().getFile()=nd.getFile()
-    and depth=1 
-    and result = "(return " + nd.(DataFlow::CallNode).getACallee().getName() + ")"
-    and asRhs = false
-  ) or
-  // the global object
-  isRelevant(nd) and
-  nd = DataFlow::globalObjectRef() and
-  result = "(global)" and
-  depth = 1 and
-  asRhs = false
-  or
-  // package imports/exports
-  isRelevant(nd) and
-  exists(string pkg |
-    nd = DataFlow::moduleImport(pkg) and
-    // avoid picking up local imports
-    pkg.regexpMatch("[^./].*") and
-    asRhs = false
-    or
-    nd = getAnExport(pkg).getALocalSource() and
-    asRhs = true
-  |
-    result = "(root https://www.npmjs.com/package/" + pkg + ")" and
-    depth = 1
-  )
-  or
-  // compound representations
-  exists(DataFlow::SourceNode base, string step, string baserep |
-    (
-      baserep = oldCandidateRep(base, depth - 1, _) and
-      // bound maximum depth of candidate representation
-      depth <= maxdepth()
-      or
-      baserep = "*" and
-      depth = 1 and
-      // avoid creating trivial representations like `(return *)`
-      step.regexpMatch("(member|parameter) [^\\d].*") and
-      isRelevant(nd)
-    ) and
-    result = "(" + step + " " + baserep + ")"
-  |
-    // members
-    exists(string prop |
-      nd = base.getAPropertyRead(prop) and
-      asRhs = false
-      or
-      nd = base.getAPropertyWrite(prop).getRhs().getALocalSource() and
-      asRhs = true
-    |
-      step = "member " + prop
-    )
-    or
-    // instances
-    (
-      nd = base.getAnInstantiation() and
-      asRhs = false
-      or
-      nd = base.(DataFlow::ClassNode).getAnInstanceReference() and
-      asRhs = false
-    ) and
-    step = "instance"
-    or
-    // parameters
-    exists(string p |
-      exists(int i |
-        nd = base.(DataFlow::FunctionNode).getParameter(i) and
-        asRhs = false
-        or
-        nd = base.(DataFlow::InvokeNode).getArgument(i) and
-        asRhs = true
-        or 
-        i = -1 and nd = base.(DataFlow::CallNode).getReceiver() and
-        asRhs = true
-      |
-        p = i.toString()
-      )
-      or
-      nd = base.(DataFlow::FunctionNode).getAParameter() and
-      p = nd.(DataFlow::ParameterNode).getName() and
-      asRhs = false
-    |
-      step = "parameter " + p
-    )
-    or
-    // return values
-    (
-      nd = base.(DataFlow::FunctionNode).getAReturn().getALocalSource() and
-      asRhs = true
-      or
-      nd = base.getAnInvocation() and
-      asRhs = false
-    ) and
-    step = "return"
-  )
-  or
-  // named exports, which are treated as members of packages
-  isRelevant(nd) and
-  exists(string pkg, string m, string baserep |
-    nd = getAnExport(pkg, m).getALocalSource() and
-    baserep = "(root https://www.npmjs.com/package/" + pkg + ")" and
-    result = "(member " + m + " " + [baserep, "*"] + ")" and
-    depth = 2 and
-    asRhs = true
-  )
-  or
-  // global variables, which are treated as members of the global object
-  isRelevant(nd) and
-  exists(string g |
-    nd = DataFlow::globalVarRef(g) and
-    asRhs = false
-    or
-    exists(AssignExpr assgn |
-      assgn.getLhs() = DataFlow::globalVarRef(g).asExpr() and
-      nd = assgn.getRhs().flow().getALocalSource()
-    ) and
-    asRhs = true
-  |
-    result = "(member " + g + " (global))" and
-    depth = 2
-  )
-  or
-  // we ignore `await`
-  exists(DataFlow::SourceNode base |
-    base.flowsToExpr(nd.asExpr().(AwaitExpr).getOperand()) and
-    result = oldCandidateRep(base, depth, asRhs)
   )
 }

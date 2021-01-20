@@ -1,29 +1,61 @@
+/**
+ * An implementation of propagation graphs for JavaScript, inspired by
+ * [Seldon](https://dl.acm.org/doi/10.1145/3314221.3314648).
+ *
+ * The nodes of the propagation graph (also called "events") are simply normal data-flow nodes
+ * (`DataFlow::Node`). In addition to normal data flow edges, we add steps from properties to their
+ * containing object and from function-call arguments to returns. Additionally, certain control
+ * dependencies are turned into data dependencies by representing checks on variables by
+ * propagation-graph edges. For details, see predicate `step` below.
+ *
+ * We use a simple access-path language to represent events; see `NodeRepresentation.qll`.
+ *
+ * Unlike Seldon, we do not use a points-to analysis to model inter-procedural flow, but instead use
+ * the type-tracking functionality from the CodeQL standard library; see predicate `triple` below.
+ */
+
 import javascript
 import NodeRepresentation
+
 /**
  * The name of an npm package that should be considered when building the propagation graph.
+ * The filter is applied to sink and source candidates 
  *
  * To customize, implement concrete subclasses of this class.
  *
- * For example, to only consider `mongodb` you can use
+ * For example, to only consider `mongodb` in for sink candidates you can use
  *
  * ```ql
- * class MongoDbIsInteresting extends InterestingPackage {
+ * class MongoDbIsInteresting extends InterestingPackageForSinks {
  *   MongoDbIsInteresting() { this = "mongodb" }
  * }
  * ```
+ * 
+ * To do the same with sources:
+ * ```ql
+ * class MongoDbIsInteresting extends InterestingPackageForSources {
+ *   MongoDbIsInteresting() { this = "mongodb" }
+ * }
+ * ```
+
+ * 
  *
- * To consider all imports interesting, use
+ * To consider all imports interesting, both for sorces and sinks use
  *
  * ```ql
- * class AllPackagesAreInteresting extends InterestingPackage {
+ * class AllPackagesAreInteresting extends InterestingPackageForSinks, InterestingPackageForSources {
  *   AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
  * }
  * ```
  */
-abstract class InterestingPackage extends string {
+abstract class InterestingPackageForSinks extends string {
   bindingset[this]
-  InterestingPackage() { any() }
+  InterestingPackageForSinks() { any() }
+}
+
+abstract class InterestingPackageForSources extends string {
+  bindingset[this]
+  InterestingPackageForSources() { any() }
 }
 
 /**
@@ -51,7 +83,7 @@ abstract class AdditionalSanitizerCandidate extends DataFlow::Node {
  * Reducing this bound will generate more candidate representations, but
  * will generally negatively affect performance.
  */
- int minOcurrences() { result = 1 }
+int minOcurrences() { result = 1 }
 
 
 /** Holds if data read from a use of `f` may originate from package `pkg`. */
@@ -109,8 +141,10 @@ private predicate guard(DataFlow::CallNode pred, DataFlow::Node succ) {
  * Holds if `pred` -> `succ` is a known flow step for which we have a model.
  */
 predicate knownStep(DataFlow::Node pred, DataFlow::Node succ) {
-  // exclude known flow/taint step
-  any(TaintTracking::AdditionalTaintStep s).step(pred, succ)
+  // exclude known flow/taint step, except for the step from `x` to `x.p` (since otherwise
+  // property reads will never be considered sources)
+  any(TaintTracking::AdditionalTaintStep s).step(pred, succ) and
+  not succ instanceof DataFlow::PropRead
   or
   exists(DataFlow::AdditionalFlowStep s |
     s.step(pred, succ) or
@@ -145,19 +179,16 @@ string rep(DataFlow::Node nd, boolean asRhs) {
  * Holds if `u` is a candidate for a taint source.
  */
 predicate isSourceCandidate(API::Node nd, DataFlow::Node u) {
-  // mayComeFromLibrary(nd, any(InterestingPackage pkg)) and
-  mayComeFromLibrary(nd, _) and
+  mayComeFromLibrary(nd, any(InterestingPackageForSources pkg)) and
   not nd = API::moduleImport(_) and
   u = nd.getAnImmediateUse() and
   exists(rep(u, false)) and
+  not knownStep(_, u) and
   (
-    not knownStep(_, u) and
-    (
-      u instanceof DataFlow::CallNode and
-      not u = any(Import i).getImportedModuleNode()
-      or
-      u instanceof DataFlow::ParameterNode
-    )
+    u instanceof DataFlow::CallNode and
+    not u = any(Import i).getImportedModuleNode()
+    or
+    u instanceof DataFlow::ParameterNode
     or
     u instanceof DataFlow::PropRead
   )
@@ -179,7 +210,7 @@ predicate isSanitizerCandidate(DataFlow::CallNode u) {
  * Holds if `d` is a candidate for a taint sink.
  */
 predicate isSinkCandidate(API::Node nd, DataFlow::Node d) {
-  mayEscapeToLibrary(nd, any(InterestingPackage pkg)) and
+  mayEscapeToLibrary(nd, any(InterestingPackageForSinks pkg)) and
   d = nd.getARhs() and
   not knownStep(d, _) and
   exists(rep(d, true)) and

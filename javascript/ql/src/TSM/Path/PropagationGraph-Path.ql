@@ -28,7 +28,12 @@ private string targetLibrary() {
   //     imp = API::moduleImport(result)
   // )
 }
-class PathIsInteresting extends InterestingPackage {
+
+class AllPackagesAreInteresting extends InterestingPackageForSources {
+  AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
+} 
+
+class PathIsInteresting extends InterestingPackageForSinks {
   PathIsInteresting() { this = targetLibrary() }
 }
 

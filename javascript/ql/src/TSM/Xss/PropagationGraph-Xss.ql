@@ -26,10 +26,13 @@ private string targetLibrary() {
   // )
 }
 
-class XssIsInteresting extends InterestingPackage {
+class AllPackagesAreInteresting extends InterestingPackageForSources {
+  AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
+} 
+
+class XssIsInteresting extends InterestingPackageForSinks {
   XssIsInteresting() { this = targetLibrary() }
 }
-
 
 predicate isSourceWorse(DataFlow::Node source) {
   source instanceof DomBasedXssWorse::Source

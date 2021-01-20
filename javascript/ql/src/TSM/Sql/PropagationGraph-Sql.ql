@@ -17,7 +17,10 @@ private string targetLibrary() {
   // )
 }
 
-class SqlIsInteresting extends InterestingPackage {
+class AllPackagesAreInteresting extends InterestingPackageForSources {
+  AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
+} 
+class SqlIsInteresting extends InterestingPackageForSinks {
   SqlIsInteresting() { this = targetLibrary() }
 }
 

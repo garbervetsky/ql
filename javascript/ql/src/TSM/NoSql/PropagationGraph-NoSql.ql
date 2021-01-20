@@ -15,7 +15,11 @@ private string targetLibrary() {
   //     imp = API::moduleImport(result)
   // )
 }
-class NoSqlIsInteresting extends InterestingPackage {
+
+class AllPackagesAreInteresting extends InterestingPackageForSources {
+   AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
+} 
+class NoSqlIsInteresting extends InterestingPackageForSinks {
   NoSqlIsInteresting() { this = targetLibrary() }
 }
 
@@ -33,27 +37,36 @@ class FilterWorse extends PropagationGraph::NodeFilter {
   FilterWorse() { this = "SrcWorse" } 
   // We consider triples starting from known sources only
   override predicate filterSource(DataFlow::Node src) { src instanceof NosqlInjectionWorse::Source  }
-  override predicate filterSink(DataFlow::Node snk) { any() }
+  override predicate filterSink(DataFlow::Node snk) { 
+    exists (DataFlow::InvokeNode invk |
+      (snk = invk.getAnArgument() or snk = invk.(DataFlow::MethodCallNode).getReceiver())
+      // and not snk = invk.getABoundCallbackParameter(_,_)
+    )
+  }
   override predicate filterSanitizer(DataFlow::Node san) { any() }
 }
 
 predicate sink(DataFlow::Node src, DataFlow::Node sink, string rep, string repc, boolean pw, int score) {
   // isSinkWorse(sink) and
-  // src instanceof NosqlInjectionWorse::Source and 
+  src instanceof NosqlInjectionWorse::Source and 
   PropagationGraph::tripleSrcSanSnk(src,_, sink) and
+  isSinkCandidate(_, sink) and
   rep = PropagationGraph::chooseBestRep(sink, true) and
+  //rep.indexOf("return (parameter")>0 and
   PropagationGraph::isRepWithScore(rep, sink, _, true, score)   and
   // sink.getFile().getBaseName() = "admin.js" and
   // sink.getStartLine() = 214 and
+  
   repc = sink.getFile().getBaseName()+ " " 
         + sink.getStartLine() and
+  sink.getALocalSource().hasPropertyWrite(_, _) and pw = true
   // d>=2 and 
   // repc = candidateRep(sink, _, true) and
-  (
-    containsAPropertyThatIsWrittenTo(sink) and pw = true
-  or 
-  not containsAPropertyThatIsWrittenTo(sink) and pw = false)
-  //and rep.indexOf("pw")>=0
+  // (
+  //   containsAPropertyThatIsWrittenTo(sink) and pw = true
+  // or 
+  // not containsAPropertyThatIsWrittenTo(sink) and pw = false)
+  // //and rep.indexOf("pw")>=0
 }
 
 // class NosqlAdditionalStep extends TaintTracking::AdditionalTaintStep {
