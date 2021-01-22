@@ -17,13 +17,13 @@ class XssSinkCandidate extends AdditionalSinkCandidate {
 
 
 private string targetLibrary() { 
-  result = "jquery" 
-  or result = "angular"
-  or result = "XRegExp"
-  or result = "fs"
-  // exists(API::Node imp | 
-  //     imp = API::moduleImport(result)
-  // )
+  // result = "jquery" 
+  // or result = "angular"
+  // or result = "XRegExp"
+  // or result = "fs"
+  exists(API::Node imp | 
+      imp = API::moduleImport(result)
+  )
 }
 
 class AllPackagesAreInteresting extends InterestingPackageForSources {

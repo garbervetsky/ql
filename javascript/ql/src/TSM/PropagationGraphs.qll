@@ -67,6 +67,7 @@ abstract class InterestingPackageForSources extends string {
  * class MoreSinks extends SinkCandidate {
  *    MoreSinks() { this = any(API::moduleImport(_)).getAnArgument() }
  * }
+ * ```
  */
 abstract class AdditionalSourceCandidate extends DataFlow::Node {
 }
@@ -178,19 +179,21 @@ string rep(DataFlow::Node nd, boolean asRhs) {
 /**
  * Holds if `u` is a candidate for a taint source.
  */
-predicate isSourceCandidate(API::Node nd, DataFlow::Node u) {
-  mayComeFromLibrary(nd, any(InterestingPackageForSources pkg)) and
-  not nd = API::moduleImport(_) and
-  u = nd.getAnImmediateUse() and
-  exists(rep(u, false)) and
-  not knownStep(_, u) and
-  (
-    u instanceof DataFlow::CallNode and
-    not u = any(Import i).getImportedModuleNode()
-    or
-    u instanceof DataFlow::ParameterNode
-    or
-    u instanceof DataFlow::PropRead
+predicate isSourceCandidate(DataFlow::Node u) {
+  exists(API::Node nd |
+    mayComeFromLibrary(nd, any(InterestingPackageForSources pkg)) and
+    not nd = API::moduleImport(_) and
+    u = nd.getAnImmediateUse() and
+    exists(rep(u, false)) and
+    not knownStep(_, u) and
+    (
+      u instanceof DataFlow::CallNode and
+      not u = any(Import i).getImportedModuleNode()
+      or
+      u instanceof DataFlow::ParameterNode
+      or
+      u instanceof DataFlow::PropRead
+    )
   )
   or 
   u instanceof AdditionalSourceCandidate
@@ -209,20 +212,22 @@ predicate isSanitizerCandidate(DataFlow::CallNode u) {
 /**
  * Holds if `d` is a candidate for a taint sink.
  */
-predicate isSinkCandidate(API::Node nd, DataFlow::Node d) {
-  mayEscapeToLibrary(nd, any(InterestingPackageForSinks pkg)) and
-  d = nd.getARhs() and
-  not knownStep(d, _) and
-  exists(rep(d, true)) and
-  (
-    d = any(ReturnStmt ret).getExpr().flow()
-    or
-    exists(DataFlow::InvokeNode invk |
-      d = invk.(DataFlow::MethodCallNode).getReceiver() or
-      d = invk.getAnArgument()
+predicate isSinkCandidate(DataFlow::Node d) {
+  exists(API::Node nd |
+    mayEscapeToLibrary(nd, any(InterestingPackageForSinks pkg)) and
+    d = nd.getARhs() and
+    not knownStep(d, _) and
+    exists(rep(d, true)) and
+    (
+      d = any(ReturnStmt ret).getExpr().flow()
+      or
+      exists(DataFlow::InvokeNode invk |
+        d = invk.(DataFlow::MethodCallNode).getReceiver() or
+        d = invk.getAnArgument()
+      )
+      or
+      d = any(DataFlow::PropWrite pw).getRhs()
     )
-    or
-    d = any(DataFlow::PropWrite pw).getRhs()
   )
   or 
   d instanceof AdditionalSinkCandidate
@@ -245,7 +250,7 @@ predicate step(DataFlow::Node pred, DataFlow::Node succ) {
  * Gets a node that is reachable from a source candidate in the propagation graph.
  */
 DataFlow::Node reachableFromSourceCandidate(DataFlow::Node src, DataFlow::TypeTracker t) {
-  isSourceCandidate(_, result) and
+  isSourceCandidate(result) and
   src = result and
   t.start()
   or
@@ -287,5 +292,5 @@ predicate triple(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk) {
   san = reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
   src != san and
   snk = reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
-  isSinkCandidate(_, snk)
+  isSinkCandidate(snk)
 }

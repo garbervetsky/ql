@@ -415,6 +415,9 @@ class ConstraintBuilder:
                     for src in sources:
                         if src in self.events:
                             sanit_sink[sanit_sink_tuple].append(self.events[src])
+                        else:
+                            print("Src not found!", src)
+                            # sys.exit()
 
                     for src in sources:
                         # source_sink will contain for every pair of source -> sink, the possible
@@ -441,6 +444,18 @@ class ConstraintBuilder:
                                 source_sanit[source_sanit_tuple] = source_sanit_list
 
                             source_sanit_list.append(self.events[snk])
+                        else:
+                            if snk not in self.events:
+                                print("Sink not found!", snk)
+                            # sys.exit()
+                else:
+                    if  san not in self.events:
+                        print("Sanitizer not found!", san)
+                    if  snk not in self.events:
+                        print("Snk not found!", snk)
+                    # sys.exit()
+
+
 
         return source_sanit, source_sink, sanit_sink
 

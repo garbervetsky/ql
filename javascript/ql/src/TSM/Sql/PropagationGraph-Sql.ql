@@ -17,12 +17,25 @@ private string targetLibrary() {
   // )
 }
 
-class AllPackagesAreInteresting extends InterestingPackageForSources {
+private string targetLibraryWorse() {
+  result in ["mysql",
+            "pg", 
+            "sqlite3", 
+            "express", 
+            "azure-storage", 
+            "mssql", 
+            "process",
+            "multiparty",
+            "async/eachLimit",
+            "body-parser"]
+}
+
+class AllPackagesAreInteresting extends InterestingPackageForSources, InterestingPackageForSinks {
   AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
 } 
-class SqlIsInteresting extends InterestingPackageForSinks {
-  SqlIsInteresting() { this = targetLibrary() }
-}
+// class SqlIsInteresting extends InterestingPackageForSinks {
+//   SqlIsInteresting() { this = targetLibraryWorse()}
+// }
 
 class SqlSourceCandidate extends AdditionalSourceCandidate {
   SqlSourceCandidate() { none() }

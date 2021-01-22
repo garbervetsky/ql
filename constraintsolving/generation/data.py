@@ -180,10 +180,10 @@ class DataGenerator:
             query_type, SOURCES, f"source{query_type}Classes", ctx[SOURCE_ENTITIES])
         # sinks
         self._generate_for_entity(
-            query_type, SINKS, f"sink{query_type}Classes", ctx[SINK_ENTITIES])
+            query_type, SINKS, f"sink{query_type}Classes", ctx[SINK_ENTITIES], False)
         # sanitizers
         self._generate_for_entity(
-            query_type, SANITIZERS, f"sanitizer{query_type}Classes", ctx[SANITIZER_ENTITIES])
+            query_type, SANITIZERS, f"sanitizer{query_type}Classes", ctx[SANITIZER_ENTITIES], False)
 
         # running propagation graph queries
         try:
@@ -191,6 +191,11 @@ class DataGenerator:
                 self.project_dir,
                 self._get_tsm_query_file(query_type, f"PropagationGraph-{query_type}.ql"),
                 f"{logs_folder}/js-results.csv")
+            # FIX self.codeql.database_query(
+            #     self.project_dir,
+            #     self._get_tsm_query_file(query_type, f"PropagationGraph-{query_type}.ql")
+            # )
+
         except Exception:
             self.logger.info("Error Analyzing PropagationGraph.ql")
 
@@ -244,7 +249,7 @@ class DataGenerator:
         )
 
     def _generate_for_entity(self, query_type: str, entity_type: str, result_set: str, output_file: str, 
-                             force_query: bool = False):
+                             force_query: bool = True):
         """Runs the query for a given entity, and extracts the results into a csv file."""
         self.logger.info(
             "Generating %s data in file=[%s]", entity_type, output_file)
@@ -259,6 +264,10 @@ class DataGenerator:
                 self.project_dir,
                 query_path,
                 f"{logs_folder}/js-results.csv")
+            # FIX self.codeql.database_query(
+            #     self.project_dir,
+            #     query_path)
+
         self.codeql.bqrs_decode(
             bqrs_file,
             result_set,

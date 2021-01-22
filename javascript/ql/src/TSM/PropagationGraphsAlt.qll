@@ -7,7 +7,7 @@ import PropagationGraphs
 predicate repGenerator = candidateRep/3;
 
 string test(DataFlow::Node sink, int score, int i) {
-  i in [1..3] and
+  i in [1 .. 3] and
   result = PropagationGraph::chooseBestReps(sink, true, i) and
   PropagationGraph::isRepWithScore(result, sink, _, true, score) and
   sink.getFile().getBaseName() = "admin.js" and
@@ -15,24 +15,26 @@ string test(DataFlow::Node sink, int score, int i) {
 }
 
 module PropagationGraph {
-
   abstract class NodeFilter extends string {
     bindingset[this]
     NodeFilter() { any() }
+
     predicate filterSource(DataFlow::Node src) { any() }
+
     predicate filterSanitizer(DataFlow::Node san) { any() }
+
     predicate filterSink(DataFlow::Node snk) { any() }
   }
 
   predicate tripleSrcSanSnk(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk) {
-     triple(src, san, snk) and 
-     applyFilter(src, san, snk)
+    triple(src, san, snk) and
+    applyFilter(src, san, snk)
   }
 
   predicate applyFilter(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk) {
     any(NodeFilter fsrc).filterSource(src) and
     any(NodeFilter fsan).filterSanitizer(san) and
-    any(NodeFilter fs).filterSink(snk) 
+    any(NodeFilter fs).filterSink(snk)
   }
 
   predicate pairSanSnk(string ssan, string ssnk) {
@@ -43,13 +45,12 @@ module PropagationGraph {
       // We keep only sinks that are candidates
       // (parameters of library functions)
       // isCandidateSink(snk, targetLibrary()) and
-      isSinkCandidate(_, snk) and
+      isSinkCandidate(snk) and
       exists(getconcatrep(src, false)) and
       ssan = getconcatrep(san, false) and
-      ssnk = getconcatrep(snk, true)
-      and
-      applyFilter(src, san, snk) 
-      )
+      ssnk = getconcatrep(snk, true) and
+      applyFilter(src, san, snk)
+    )
   }
 
   predicate pairSrcSan(string ssrc, string ssan) {
@@ -61,12 +62,11 @@ module PropagationGraph {
       // We keep only sinks that are candidates
       // (parameters of library functions)
       // isCandidateSink(snk, targetLibrary())  and
-      isSinkCandidate(_, snk) and
+      isSinkCandidate(snk) and
       exists(getconcatrep(snk, true)) and
       ssan = getconcatrep(san, false) and
-      ssrc = getconcatrep(src, false)
-      and
-      applyFilter(src, san, snk) 
+      ssrc = getconcatrep(src, false) and
+      applyFilter(src, san, snk)
     )
   }
 
@@ -143,42 +143,44 @@ module PropagationGraph {
     )
   }
 
+  predicate isPreferedStructForRep(int cm, int cr, int cp, int cpr, int croot) {
+    cm in [1 .. 2] and
+    cp in [1 .. 2] and
+    cr in [0 .. 2] and
+    cpr = 0 and
+    croot in [0 .. 1]
+  }
+
   /**
    *  For sinks prioritizes paterns like `parameter x (return member fun )
    *  by penalizing more occurences of (pamerameter|member)
    */
   predicate isRepWithScore(string rep, DataFlow::Node sink, int depth, boolean asRhs, int score) {
     rep = rep(sink, depth, asRhs) and
-    exists(int cm, int cr, int cp, int cpr, int croot, int plus1, int plus2 |
+    exists(int cm, int cmw, int cr, int cp, int cpr, int croot, int plus1, int plus2 |
       cm = count(rep.indexOf("member")) and
+      cmw = count(rep.indexOf("member *")) and
       cr = count(rep.indexOf("return")) and
       cp = count(rep.indexOf("parameter")) and
       cpr = count(rep.indexOf("parameter -1")) and
       croot = count(rep.indexOf("(root ")) and
+      plus1 = 0 and
       (
         asRhs = true and
-        plus1 = 1 and 
+        // plus1 = 1 and
         //plus1 = scoreForCanonicalRep(rep, sink, depth) and
         (
-          croot = 1 and
-          cp in [1 .. 2] and
-          cpr = 0 and
-          cm in [1 .. 2] and
-          plus2 = 40 - cp - cm
+          isPreferedStructForRep(cm, cr, cp, cpr, croot) and
+          plus2 = 80 - 7 * (cp-1) - 7 * (cm-1) - cmw - 40 * croot
           or
-          croot = 0 and
-          cp in [1 .. 2] and
-          cpr = 0 and
-          cm in [1 .. 1] and
-          plus2 = 80 - cp - cm
-          or
+          not isPreferedStructForRep(cm, cr, cp, cpr, croot) and
           plus2 = 0
         )
         or
         asRhs = false and plus1 = 0 and plus2 = 0
       ) and
       // Penalizes the receivers againts members and roots
-      score = plus1 + plus2 + cm * 4 + cr * 3 + cp * 5 - cpr * 8
+      score = plus1 + plus2 + cm* 4 + cr * 3 + cp * 5 - cpr * 8 - cmw*7
     )
   }
 
@@ -188,7 +190,7 @@ module PropagationGraph {
    * and the use of external functions, penalizes the receiver as parameter
    */
   string chooseBestReps(DataFlow::Node sink, boolean asRhs) {
-    exists(int i | i in [1 .. 3] | result = chooseBestReps(sink, asRhs, i))
+    exists(int i | i in [1 .. 2] | result = chooseBestReps(sink, asRhs, i))
   }
 
   string chooseBestReps(DataFlow::Node sink, boolean asRhs, int i) {
@@ -210,7 +212,7 @@ module PropagationGraph {
       max(string rep, int depth, int score |
         isRepWithScore(rep, sink, depth, asRhs, score)
       |
-        rep order by score desc, depth desc, rep
+        rep order by score /*desc, depth desc, rep*/
       )
   }
 

@@ -16,12 +16,15 @@ private string targetLibrary() {
   // )
 }
 
-class AllPackagesAreInteresting extends InterestingPackageForSources {
+private string targetLibraryWorse() {
+  result in ["mongodb", "mongoose"]
+}
+class AllPackagesAreInteresting extends InterestingPackageForSources, InterestingPackageForSinks {
    AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
 } 
-class NoSqlIsInteresting extends InterestingPackageForSinks {
-  NoSqlIsInteresting() { this = targetLibrary() }
-}
+// class NoSqlIsInteresting extends InterestingPackageForSinks {
+//   NoSqlIsInteresting() { this = targetLibraryWorse() }
+// }
 
 // No adding extra sources to the propagation graph
 class NoSqlSourceCandidate extends AdditionalSourceCandidate {
@@ -50,7 +53,7 @@ predicate sink(DataFlow::Node src, DataFlow::Node sink, string rep, string repc,
   // isSinkWorse(sink) and
   src instanceof NosqlInjectionWorse::Source and 
   PropagationGraph::tripleSrcSanSnk(src,_, sink) and
-  isSinkCandidate(_, sink) and
+  isSinkCandidate(sink) and
   rep = PropagationGraph::chooseBestRep(sink, true) and
   //rep.indexOf("return (parameter")>0 and
   PropagationGraph::isRepWithScore(rep, sink, _, true, score)   and
@@ -84,7 +87,7 @@ private predicate isBaseAdditionalFlowStep(
   TaintedObject::step(src, trg, _, _)
   or
   // additional flow step to track taint through NoSQL query objects
-  isSinkCandidate(_, trg) and
+  isSinkCandidate(trg) and
   exists(NoSQL::Query query, DataFlow::SourceNode queryObj |
     queryObj.flowsToExpr(query) and
     queryObj.flowsTo(trg) and
